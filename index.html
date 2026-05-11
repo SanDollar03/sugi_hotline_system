@@ -1,23 +1,101 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#00843d" />
-  <title>ホットラインAIエージェント プロトタイプ</title>
-  <link rel="stylesheet" href="./styles.css" />
+  <title>かんたん操作Webアプリ</title>
+  <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
-  <div id="app"></div>
-  <div id="phoneModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="phoneTitle">
-    <div class="modal">
-      <h2 id="phoneTitle">電話相談に切り替えできます</h2>
-      <p>不安が強い場合や、入力する時間がない場合は、社内で定めたホットライン番号へ電話してください。このプロトタイプでは実番号を設定していません。</p>
-      <div class="actions">
-        <button class="btn btn-primary" id="closePhoneModal">閉じる</button>
+  <a class="skip-link" href="#main">本文へ移動する</a>
+
+  <main id="main" class="page">
+    <header class="header">
+      <span class="eyebrow">かんたん操作</span>
+      <h1>必要な操作を、順番にご案内します</h1>
+      <p class="lead">
+        文字を大きく、押す場所をはっきり表示しています。迷ったときは、青いボタンだけ見れば大丈夫です。
+      </p>
+    </header>
+
+    <section class="operator-card" aria-label="案内メッセージ">
+      <div class="operator-icon" aria-hidden="true">案</div>
+      <div>
+        <p class="operator-name">案内スタッフ</p>
+        <p>
+          こんにちは。ここでは、画面の案内に沿って進めるだけで操作できます。
+          次に操作する場所は、青い枠の中にあります。
+        </p>
       </div>
-    </div>
-  </div>
-  <script src="./hotline_app.js"></script>
+    </section>
+
+    <section class="section-card" aria-labelledby="size-title">
+      <h2 id="size-title" class="section-title">文字の大きさ</h2>
+      <p class="section-description">
+        画面の文字が小さく感じる場合は、下のボタンでさらに大きくできます。
+      </p>
+
+      <div class="button-row" aria-label="文字サイズ変更">
+        <button class="secondary-button" type="button" data-font-size="normal">
+          標準の大きさに戻す
+        </button>
+        <button class="secondary-button emphasized" type="button" data-font-size="large">
+          文字をさらに大きくする
+        </button>
+      </div>
+    </section>
+
+    <section class="section-card" aria-labelledby="form-title">
+      <h2 id="form-title" class="section-title">はじめに確認してください</h2>
+      <p class="section-description">
+        分かる範囲で入力してください。あとから確認できます。
+      </p>
+
+      <div class="form-group">
+        <label for="name">お名前</label>
+        <input id="name" name="name" type="text" autocomplete="name" placeholder="例：山田 太郎" />
+        <p class="help-text">分からない場合は空欄でも構いません。</p>
+      </div>
+
+      <div class="form-group">
+        <label for="memo">ご相談内容</label>
+        <textarea id="memo" name="memo" rows="4" placeholder="例：操作方法を確認したいです"></textarea>
+        <p class="help-text">短い文章で大丈夫です。あとから書き直せます。</p>
+      </div>
+
+      <div class="action-area" aria-label="次に操作する場所">
+        <span class="action-label">次に押す場所はこちらです</span>
+
+        <button class="main-button" type="button" id="mainActionButton">
+          <span class="button-text">
+            <span class="button-title">内容を確認して次へ進む</span>
+            <span class="button-note">まだ確定されません。次の画面で確認できます。</span>
+          </span>
+          <span class="button-arrow" aria-hidden="true">›</span>
+        </button>
+
+        <p class="sub-note">
+          迷ったら、この青いボタンを押してください。
+        </p>
+      </div>
+
+      <div id="statusMessage" class="message info" role="status" aria-live="polite">
+        まだ操作は始まっていません。準備ができたら青いボタンを押してください。
+      </div>
+    </section>
+
+    <section class="section-card" aria-labelledby="help-title">
+      <h2 id="help-title" class="section-title">困ったとき</h2>
+      <p class="section-description">
+        うまく進めない場合は、最初の状態に戻してやり直せます。
+      </p>
+
+      <button class="secondary-button" type="button" id="resetButton">
+        最初の状態に戻す
+      </button>
+    </section>
+  </main>
+
+  <script src="./script.js"></script>
 </body>
 </html>
