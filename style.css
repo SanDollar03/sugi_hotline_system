@@ -8,6 +8,10 @@
   --primary: #1559c7;
   --primary-dark: #0e3f91;
   --primary-soft: #eaf1ff;
+  --header-green: #15803d;
+  --header-green-dark: #0f5f2e;
+  --bot-soft: #f0faf3;
+  --bot-border: #bfe3ca;
   --success: #0f7a3b;
   --success-soft: #e8f7ee;
   --warning: #8a5a00;
@@ -85,16 +89,23 @@ select:focus-visible {
   min-height: 100vh;
   margin: 0 auto;
   background: var(--surface-soft);
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: minmax(0, 60fr) minmax(0, 40fr);
   overflow: hidden;
   box-shadow: var(--shadow);
 }
 
+.bot-area {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
+
 .chat-header {
-  flex: 0 0 auto;
-  background: var(--surface);
-  border-bottom: 3px solid var(--border);
+  background: var(--header-green);
+  color: #fff;
+  border-bottom: 4px solid var(--header-green-dark);
   padding: 14px 18px;
   display: flex;
   align-items: center;
@@ -113,8 +124,9 @@ select:focus-visible {
   width: 56px;
   height: 56px;
   border-radius: 18px;
-  background: var(--primary);
-  color: white;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  border: 2px solid rgba(255, 255, 255, 0.72);
   display: grid;
   place-items: center;
   font-weight: 900;
@@ -130,7 +142,7 @@ select:focus-visible {
 
 .chat-header p {
   margin: 2px 0 0;
-  color: var(--muted);
+  color: rgba(255, 255, 255, 0.92);
   font-size: 0.86rem;
   font-weight: 700;
 }
@@ -143,24 +155,24 @@ select:focus-visible {
 
 .header-button {
   min-height: 48px;
-  border: 3px solid var(--primary);
+  border: 3px solid rgba(255, 255, 255, 0.9);
   border-radius: 14px;
   padding: 8px 14px;
-  background: white;
-  color: var(--primary-dark);
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
   font-size: 0.9rem;
   font-weight: 900;
 }
 
 .header-button.danger {
-  border-color: var(--danger);
-  color: var(--danger);
+  border-color: rgba(255, 220, 220, 0.95);
+  color: #fff;
+  background: rgba(164, 38, 44, 0.28);
 }
 
 .chat-log {
-  flex: 1 1 auto;
   min-height: 0;
-  overflow-y: auto;
+  overflow-y: scroll;
   padding: 20px 18px 28px;
   scroll-behavior: smooth;
 }
@@ -188,7 +200,7 @@ select:focus-visible {
 }
 
 .message-row.bot .avatar {
-  background: var(--primary);
+  background: var(--header-green);
   color: #fff;
 }
 
@@ -210,6 +222,8 @@ select:focus-visible {
 
 .message-row.bot .bubble {
   border-top-left-radius: 8px;
+  border-color: var(--bot-border);
+  background: var(--surface);
 }
 
 .message-row.user .bubble {
@@ -235,7 +249,8 @@ select:focus-visible {
 }
 
 .answer-panel {
-  flex: 0 0 auto;
+  min-height: 0;
+  overflow-y: scroll;
   background: var(--surface);
   border-top: 5px solid var(--primary);
   padding: 16px 18px 18px;
@@ -243,6 +258,11 @@ select:focus-visible {
 }
 
 .panel-topline {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--surface);
+  padding-bottom: 10px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -559,6 +579,10 @@ select:focus-visible {
   .chat-header {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .chat-window {
+    grid-template-rows: minmax(0, 60fr) minmax(0, 40fr);
   }
 
   .header-actions {

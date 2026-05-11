@@ -15,21 +15,23 @@
 
   <div id="app" class="app-shell">
     <section class="chat-window" aria-label="ホットラインAIエージェント">
-      <header class="chat-header">
-        <div class="header-main">
-          <span class="bot-mark" aria-hidden="true">HL</span>
-          <div>
-            <h1>ホットラインAIエージェント</h1>
-            <p>チャットで必要事項を一つずつ確認します</p>
+      <section class="bot-area" aria-label="チャットボット会話エリア">
+        <header class="chat-header">
+          <div class="header-main">
+            <span class="bot-mark" aria-hidden="true">HL</span>
+            <div>
+              <h1>ホットラインAIエージェント</h1>
+              <p>チャットで必要事項を一つずつ確認します</p>
+            </div>
           </div>
-        </div>
-        <div class="header-actions">
-          <button id="fontButton" class="header-button" type="button">文字を大きく</button>
-          <button id="resetButton" class="header-button danger" type="button">最初から</button>
-        </div>
-      </header>
+          <div class="header-actions">
+            <button id="fontButton" class="header-button" type="button">文字を大きく</button>
+            <button id="resetButton" class="header-button danger" type="button">最初から</button>
+          </div>
+        </header>
 
-      <main id="chatLog" class="chat-log" aria-live="polite" aria-label="会話履歴"></main>
+        <main id="chatLog" class="chat-log" aria-live="polite" aria-label="会話履歴"></main>
+      </section>
 
       <section class="answer-panel" aria-label="回答操作エリア">
         <div class="panel-topline">

@@ -444,8 +444,51 @@
     return makeQuestions().every((q) => isAnswered(q));
   }
 
+  function warmLeadForQuestion(key) {
+    const leads = {
+      category: "ご連絡ありがとうございます。まずは落ち着いて、いちばん近い内容を一緒に選びましょう。",
+      mistake_type: "それはお困りですね。ここから先は、必要なことだけ順番に確認していきます。",
+      store_code: "安心してください。店舗の確認から、ゆっくり進めます。",
+      store_name: "ありがとうございます。続いて店舗名を確認します。分かる範囲で大丈夫です。",
+      medical_institution: "ここも分かる範囲で大丈夫です。処方元の医療機関を確認します。",
+      dose_date: "日付は正確でなくても構いません。近いものを選んでください。",
+      discovery_date: "大丈夫です。発覚した日を、分かる範囲で選びましょう。",
+      patient_type: "患者様について、分かる範囲だけ教えてください。",
+      age_group: "個人を特定しすぎない形で確認します。安心してください。",
+      true_false_info: "ここは大切な内容ですが、文章を整える必要はありません。あとでAIが読みやすく整理します。",
+      taken: "確認できている範囲で大丈夫です。服用の有無を選んでください。",
+      taken_count: "それは心配な状況ですね。分かっている回数や日数だけで構いません。",
+      health: "安心してください。ここでは判断ではなく、事実として分かる範囲を共有します。",
+      health_detail: "それはお困りですね。症状は、聞いている範囲だけで大丈夫です。",
+      patient_reaction: "患者様の反応も、現時点で近いものを選べば大丈夫です。",
+      privacy_type: "落ち着いて進めましょう。漏洩した可能性がある情報を選んでください。",
+      privacy_detail: "不安な状況だと思います。分かる範囲の事実をそのまま入力してください。",
+      privacy_recovery: "ありがとうございます。次に、回収できているかを確認します。",
+      controlled_type: "管理薬剤の件ですね。慎重に、でも焦らず確認していきます。",
+      controlled_name_qty: "安心してください。薬剤名や数量は、分かっている範囲だけで構いません。",
+      controlled_search: "現在の捜索状況を共有できれば大丈夫です。",
+      complaint_type: "それは対応に困る状況ですね。クレームの種類を一緒に整理しましょう。",
+      complaint_detail: "そのままの言葉で大丈夫です。あとでAIが短く読みやすく整理します。",
+      complaint_risk: "現場で感じている印象で構いません。近いものを選んでください。",
+      accident_type: "事故の内容を確認します。落ち着いて、近いものを選びましょう。",
+      injury: "けが人の有無を確認します。不明な場合は不明で大丈夫です。",
+      accident_detail: "大変な状況だと思います。分かっている事実だけ入力してください。",
+      violation_type: "AIが違反かどうかを決めることはありません。確認できている種類を選んでください。",
+      violation_detail: "断定しなくて大丈夫です。確認できている内容だけ共有しましょう。",
+      other_detail: "分類に迷う内容でも大丈夫です。相談したい内容をそのまま入力してください。",
+      discovery_route: "ありがとうございます。次に、どのように分かったかを確認します。",
+      current_action: "未対応でも問題ありません。今の状況をそのまま教えてください。",
+      action_detail: "対応途中でも大丈夫です。実施済み・予定していることを分かる範囲で入力してください。",
+      supplement: "最後です。気になることがあれば、ここに残せます。なければ空欄で進められます。"
+    };
+    return leads[key] || "大丈夫です。分かる範囲で、一つずつ確認していきます。";
+  }
+
   function getQuestionText(q) {
-    return typeof q.bot === "function" ? q.bot() : q.bot;
+    const base = typeof q.bot === "function" ? q.bot() : q.bot;
+    const lead = warmLeadForQuestion(q.key);
+    return `${lead}
+${base}`;
   }
 
   function escapeHtml(value) {
@@ -602,7 +645,7 @@
     const normalizedValue = String(value == null ? "" : value).trim();
     const error = validateAnswer(q, normalizedValue);
     if (error) {
-      state.error = error;
+      state.error = `大丈夫です。${error}`;
       render();
       return;
     }
@@ -620,7 +663,7 @@
           summary
         };
         state.mode = "summary";
-        addMessage("bot", "入力内容を短く整理しました。この内容で記録してよいか確認してください。", "内容の意味は変えず、言いよどみや冗長な表現だけを整えます。");
+        addMessage("bot", "ありがとうございます。入力していただいた内容を、読みやすいように短く整理しました。この内容で記録してよいか、一緒に確認しましょう。", "安心してください。内容の意味は変えず、言いよどみや冗長な表現だけを整えます。");
         render();
         return;
       }
@@ -662,7 +705,7 @@
     state.mode = "confirm";
     state.currentKey = null;
     state.error = "";
-    addMessage("bot", "入力内容を確認しましょう。修正したい項目があれば、その項目の「修正する」を押してください。", "まだ確定ではありません。最後の青いボタンを押すまで送信扱いにはなりません。");
+    addMessage("bot", "ここまでありがとうございます。最後に入力内容を一緒に確認しましょう。修正したい項目があれば、その項目の「修正する」を押してください。", "安心してください。まだ確定ではありません。最後の青いボタンを押すまで送信扱いにはなりません。");
     render();
   }
 
@@ -675,7 +718,7 @@
     };
     state.mode = "editSelect";
     state.error = "";
-    addMessage("bot", "修正する項目を選んでください。必要なところだけ直せます。", "最初からやり直す必要はありません。");
+    addMessage("bot", "大丈夫です。修正したい項目だけ選んでください。必要なところだけ直せます。", "最初からやり直す必要はありません。ここまでの入力はできるだけ保持します。");
     render();
   }
 
@@ -694,12 +737,12 @@
     state.completedId = reportId;
     state.mode = "complete";
     addMessage("user", "この内容でホットラインへ共有します");
-    addMessage("bot", "受付しました。プロトタイプのため外部送信はしていませんが、実運用ではSlack通知と管理表転記がここで実行されます。", "AIは判定せず、すべて人が確認する前提です。");
+    addMessage("bot", "受付しました。ここまで入力していただき、ありがとうございます。プロトタイプのため外部送信はしていませんが、実運用ではSlack通知と管理表転記がここで実行されます。", "安心してください。AIは判定せず、すべて人が確認する前提です。");
     render();
   }
 
   function phoneFallback() {
-    addMessage("bot", "不安な場合は、通常のホットライン電話で相談してください。この画面の入力は途中でも問題ありません。", "緊急性がある、判断に迷う、入力が難しい場合は電話を優先してください。");
+    addMessage("bot", "不安な場合は、通常のホットライン電話で相談してください。この画面の入力は途中でも問題ありません。安心してください、電話に切り替えても大丈夫です。", "緊急性がある、判断に迷う、入力が難しい場合は電話を優先してください。入力を完璧に終わらせる必要はありません。");
     render();
   }
 
@@ -714,8 +757,8 @@
     state.startedAt = new Date();
     state.completedId = "";
 
-    addMessage("bot", "こんにちは。ホットラインAIエージェントです。ここでは、必要な内容を一つずつ確認します。", "文章をきれいに書く必要はありません。選ぶだけで進められる項目を多くしています。");
-    addMessage("bot", "このAIは、重大度やミスレベルを判定しません。すべての報告はホットライン担当へ共有し、人が確認します。", "途中で不安になった場合は、いつでも電話相談に切り替えられます。");
+    addMessage("bot", "こんにちは。ご連絡ありがとうございます。急いでいる中でも、ここでは必要な内容を一つずつ一緒に確認していきます。安心してください。", "文章をきれいに書く必要はありません。選ぶだけで進められる項目を多くしています。分からないところは「不明」で進められます。");
+    addMessage("bot", "このAIは、重大度やミスレベルを判定しません。すべての報告はホットライン担当へ共有し、人が確認します。", "途中で不安になった場合は、いつでも電話相談に切り替えられます。無理に最後まで入力しなくても大丈夫です。");
     askNext();
   }
 
@@ -731,7 +774,9 @@
 
       const bubble = document.createElement("div");
       bubble.className = "bubble";
-      bubble.innerHTML = `<p>${escapeHtml(message.text)}</p>${message.small ? `<p class="small">${escapeHtml(message.small)}</p>` : ""}`;
+      const mainText = escapeHtml(message.text).replace(/\n/g, "<br>");
+      const smallText = message.small ? escapeHtml(message.small).replace(/\n/g, "<br>") : "";
+      bubble.innerHTML = `<p>${mainText}</p>${smallText ? `<p class="small">${smallText}</p>` : ""}`;
 
       row.appendChild(avatar);
       row.appendChild(bubble);
