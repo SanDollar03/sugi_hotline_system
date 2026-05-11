@@ -1,18 +1,21 @@
-# かんたん操作Webアプリ テンプレート
+# チャットでかんたん操作 Webアプリテンプレート
 
-目が悪い人、デジタル操作が苦手な人にも分かりやすいように、以下を重視したHTMLテンプレートです。
+目が悪い人、デジタル操作が苦手な人でも迷いにくいように、チャットボット風のUIにした静的HTMLテンプレートです。
 
-- 大きな文字
-- 大きなボタン
-- 操作対象を青い枠で明確化
-- 親切な案内スタッフ風の文言
-- キーボード操作時の強いフォーカス表示
-- スマートフォン対応
+## 改善内容
+
+- 青いボタンを押すと、実際に次の会話ステップへ進むように修正
+- オペレーターの案内をチャットボット風の吹き出しUIに変更
+- 操作対象を画面下部の青いボタンに統一
+- 本文を大きく、入力欄とボタンも大きく表示
+- 「まだ確定ではありません」「空欄でも進めます」など、不安を減らす文言を追加
+- 文字をさらに大きくするボタンを追加
+- GitHub Pagesでそのまま公開可能
 
 ## ファイル構成
 
 ```text
-friendly_webapp_template/
+friendly_chatbot_webapp/
 ├─ index.html
 ├─ style.css
 ├─ script.js
@@ -21,44 +24,44 @@ friendly_webapp_template/
 
 ## GitHub Pagesで公開する手順
 
-1. GitHubの自分のリポジトリに、この4ファイルをアップロードします。
-2. リポジトリの `Settings` を開きます。
-3. 左メニューの `Pages` を開きます。
-4. `Build and deployment` で `Deploy from a branch` を選びます。
-5. Branchを `main`、フォルダを `/root` にします。
-6. `Save` を押します。
-7. 表示されたURLにアクセスすると公開ページを確認できます。
+1. GitHubの対象リポジトリを開きます。
+2. このフォルダ内の `index.html`, `style.css`, `script.js`, `README.md` をリポジトリ直下にアップロードします。
+3. `Settings` を開きます。
+4. 左メニューの `Pages` を開きます。
+5. `Build and deployment` で `Deploy from a branch` を選びます。
+6. Branch を `main`、フォルダを `/root` にします。
+7. `Save` を押します。
+8. 表示されたURLにアクセスします。
 
-## カスタマイズする場所
+## 主なカスタマイズ箇所
 
-### 画面タイトル
-
-`index.html` の以下を書き換えます。
-
-```html
-<h1>必要な操作を、順番にご案内します</h1>
-```
-
-### メインボタンの文言
+### タイトル
 
 `index.html` の以下を書き換えます。
 
 ```html
-<span class="button-title">内容を確認して次へ進む</span>
-<span class="button-note">まだ確定されません。次の画面で確認できます。</span>
+<h1 id="pageTitle">チャットでかんたん操作</h1>
 ```
+
+### チャットの言葉
+
+`script.js` の `addMessage("bot", "...")` の文章を書き換えます。
+
+### 選択肢
+
+`script.js` の `purposeLabels` と `renderOperationPanel()` 内の選択肢ボタンを書き換えます。
 
 ### 色
 
-`style.css` の `:root` 内にある色を変更します。
+`style.css` の `:root` 内を書き換えます。
 
 ```css
 --primary: #1d4ed8;
---primary-dark: #153eaa;
+--primary-dark: #143fba;
 --primary-soft: #e8f0ff;
 ```
 
-## 設計メモ
+## 注意
 
-このテンプレートでは、ユーザーが迷わないように「次に押す場所」を青い枠で囲んでいます。
-押せる場所は大きく、押した後に何が起きるかをボタン内に書いています。
+このテンプレートはHTML/CSS/JavaScriptだけで動く静的Webアプリです。
+サーバー保存、ログイン、データベース連携などは含みません。
