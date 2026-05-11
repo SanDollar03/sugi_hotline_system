@@ -1,21 +1,50 @@
 <!doctype html>
 <html lang="ja">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ホットラインAIエージェント</title>
-    <meta name="description" content="チャットボット形式でホットライン報告を整理するプロトタイプ" />
-  </head>
-  <body>
-    <div id="root"></div>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ホットラインAIエージェント ローカルプロトタイプ</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <noscript>
+    <div class="noscript">
+      このプロトタイプを利用するには、ブラウザのJavaScriptを有効にしてください。
+    </div>
+  </noscript>
 
-    <!--
-      GitHub Pagesへそのまま置いて動かすためのプロトタイプ用CDN構成です。
-      実運用・本番ビルドでは Vite / Next.js 等でバンドルしてください。
-    -->
-    <script src="https://unpkg.com/react@18.3.1/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone@7.25.6/babel.min.js"></script>
-    <script type="text/babel" data-presets="react" src="./standalone_hotline_ai_agent_v3.jsx"></script>
-  </body>
+  <div id="app" class="app-shell">
+    <section class="chat-window" aria-label="ホットラインAIエージェント">
+      <header class="chat-header">
+        <div class="header-main">
+          <span class="bot-mark" aria-hidden="true">HL</span>
+          <div>
+            <h1>ホットラインAIエージェント</h1>
+            <p>チャットで必要事項を一つずつ確認します</p>
+          </div>
+        </div>
+        <div class="header-actions">
+          <button id="fontButton" class="header-button" type="button">文字を大きく</button>
+          <button id="resetButton" class="header-button danger" type="button">最初から</button>
+        </div>
+      </header>
+
+      <main id="chatLog" class="chat-log" aria-live="polite" aria-label="会話履歴"></main>
+
+      <section class="answer-panel" aria-label="回答操作エリア">
+        <div class="panel-topline">
+          <span class="panel-label">次に操作する場所</span>
+          <span id="progressText" class="progress-text">準備中</span>
+        </div>
+        <div id="questionArea" class="question-area"></div>
+        <div class="assist-actions">
+          <button id="editButton" class="assist-button" type="button">前の回答を修正する</button>
+          <button id="phoneButton" class="assist-button" type="button">不安な場合は電話で相談する</button>
+        </div>
+      </section>
+    </section>
+  </div>
+
+  <script src="app.js" defer></script>
+</body>
 </html>

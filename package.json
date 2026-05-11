@@ -1,18 +1,10 @@
 {
-  "name": "hotline-ai-agent-chatbot-v3",
-  "version": "3.1.0",
+  "name": "hotline-ai-agent-local-prototype",
+  "version": "1.0.0",
   "private": true,
-  "type": "module",
+  "description": "Local standalone chatbot prototype for hotline AI agent. No GitHub Pages dependency.",
   "scripts": {
-    "dev": "vite --host 0.0.0.0",
-    "build": "vite build",
-    "preview": "vite preview --host 0.0.0.0"
+    "start": "node server.js"
   },
-  "dependencies": {
-    "@vitejs/plugin-react": "latest",
-    "vite": "latest",
-    "react": "latest",
-    "react-dom": "latest"
-  },
-  "devDependencies": {}
+  "dependencies": {}
 }

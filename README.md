@@ -1,50 +1,64 @@
-# ホットラインAIエージェント v3.1 チャットボットUI版
+# ホットラインAIエージェント ローカルプロトタイプ
 
-## 変更点
+GitHub Pages から切り離した、ローカル起動用の独立プロトタイプです。
+React、Vite、Babel、CDN、npm install は不要です。
 
-- 画面全体をチャットボットエリアに変更
-- ユーザーが見る範囲を「会話履歴」と「回答入力エリア」に限定
-- 大きな文字、大きな選択ボタン、明確な操作エリアを採用
-- オペレーターの温かい言葉をチャット吹き出し形式で表示
-- 仕様書の10ステップ、動的分岐、AI要約確認、修正フロー、バリデーションをReact単体で実装
-- Slack通知・管理表転記はプロトタイプ用モックとして画面表示
+## 起動方法
 
-## 対象ファイル
+### 方法1：もっとも簡単
 
-- `src/hotline_ai_agent_v3.jsx`
-- ルートにも同じ `hotline_ai_agent_v3.jsx` を同梱しています。
+`index.html` をブラウザで開いてください。
 
-## GitHub Pagesでそのまま公開する場合
+### 方法2：ローカルサーバーで起動
 
-このZIPの中身をGitHubリポジトリ直下へ置いてください。
+Node.js が入っている環境で、以下を実行してください。
 
-最低限必要なファイルは以下です。
+```bash
+npm start
+```
+
+起動後、ブラウザで以下を開きます。
 
 ```text
-index.html
-standalone_hotline_ai_agent_v3.jsx
+http://localhost:3000
 ```
 
-`index.html` は、GitHub Pagesで直接表示できるようにReactとBabelをCDNから読み込むプロトタイプ構成です。
-
-## React / Viteで開発する場合
-
-Vite構成で開発したい場合は、`index.vite.html` を `index.html` にリネームしてから使用してください。
+Windows の場合は `start-windows.bat` をダブルクリックしても起動できます。
+Mac / Linux の場合は以下です。
 
 ```bash
-npm install
-npm run dev
+./start-mac-linux.sh
 ```
 
-ビルドする場合：
+## ファイル構成
 
-```bash
-npm run build
+```text
+hotline_ai_agent_local/
+├─ index.html
+├─ style.css
+├─ app.js
+├─ server.js
+├─ package.json
+├─ start-windows.bat
+├─ start-mac-linux.sh
+└─ README.md
 ```
 
-## プロトタイプ上の注意
+## この版の仕様
 
-- Slack API、Google Sheets API、Claude APIは未接続です。
-- 送信時は「通知済み」「管理表記入済み」のモック表示を行います。
-- AI要約はルールベースの簡易処理です。
-- 実運用ではAPI連携、認証、セッション管理、ログ保管が必要です。
+- 画面全体をチャットボットUIとして構成
+- ユーザーが見る範囲は「会話履歴」と「回答操作エリア」のみ
+- 操作対象は画面下部の青枠内に固定
+- 大きな文字、大きなボタン、明確な操作導線
+- 店番6桁バリデーション
+- 回答に応じた動的分岐
+- AI要約確認フロー
+- 項目単位の修正フロー
+- 電話相談へのフォールバック
+- Slack通知、管理表転記はモック表示
+
+## 注意
+
+このプロトタイプは外部送信を行いません。
+入力内容はブラウザ画面上でのみ扱われます。
+実運用でSlack、Google Sheets、LLM APIと接続する場合は、バックエンド実装と認証・権限設計が別途必要です。
