@@ -6,7 +6,9 @@
 
 - `index.html`：ブラウザで直接開けるスタンドアロン版です。
 - `hotline_app.js`：スタンドアロン版の画面・分岐ロジックです。
+- `styles.css`：スタンドアロン版のデザイン定義です。
 - `hotline_ai_agent_v3.jsx`：React組み込み用のJSXコンポーネントです。
+- `hotline_ai_agent_v3.css`：React組み込み用のCSSです。
 
 ## 使い方
 

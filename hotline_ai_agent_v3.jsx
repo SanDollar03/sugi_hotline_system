@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import './hotline_ai_agent_v3.css';
 
 const STORAGE_KEY = 'hotline_ai_agent_v3_react_state_v1';
 
@@ -413,7 +414,7 @@ export default function HotlineAIAgentV3() {
           <button className="hl-phone" type="button" onClick={() => alert('実運用では社内ホットライン番号へ発信します。')}>電話相談に切替</button>
         </header>
         <div className="hl-status"><span>分類：<b>{app.answers.category || '未選択'}</b></span><span>店舗：<b>{store}</b></span><span>送信方針：<b>全件Slack通知・AI判定なし</b></span></div>
-        <div className="hl-progress"><div style={{ width: `${progress}%` }} /></div>
+        <progress className="hl-progress" value={done} max={Math.max(questions.length, 1)} aria-label="input progress" />
       </>
     );
   }
@@ -485,7 +486,6 @@ export default function HotlineAIAgentV3() {
 
   return (
     <div className="hl-root">
-      <style>{styles}</style>
       <main className="hl-shell">
         {renderHeader()}
         <div className="hl-panel">
@@ -497,6 +497,3 @@ export default function HotlineAIAgentV3() {
   );
 }
 
-const styles = `
-.hl-root{min-height:100vh;background:#f4f7fb;color:#1f2937;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:20px}.hl-shell{max-width:1100px;margin:0 auto}.hl-top{display:flex;gap:16px;justify-content:space-between;align-items:stretch;margin-bottom:14px}.hl-brand{display:flex;gap:14px;align-items:center;background:#fff;border:1px solid #dbe3ee;border-radius:24px;padding:16px 18px;flex:1;box-shadow:0 14px 32px rgba(15,23,42,.08)}.hl-mark{width:48px;height:48px;border-radius:16px;background:linear-gradient(135deg,#2563eb,#0f766e);color:white;font-weight:900;display:grid;place-items:center}.hl-brand h1{margin:0;font-size:28px}.hl-brand p{margin:6px 0 0;color:#64748b}.hl-phone,.hl-clear{border:1px solid #fed7aa;background:#fff7ed;color:#92400e;border-radius:18px;padding:12px 16px;font-weight:800}.hl-status{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}.hl-status span{background:#fff;border:1px solid #dbe3ee;border-radius:16px;padding:12px;color:#64748b}.hl-status b{color:#1f2937}.hl-progress{height:10px;background:#e5eaf2;border-radius:99px;overflow:hidden;margin-bottom:14px}.hl-progress div{height:100%;background:linear-gradient(90deg,#2563eb,#0f766e)}.hl-panel{background:#fff;border:1px solid #dbe3ee;border-radius:24px;box-shadow:0 18px 45px rgba(15,23,42,.10);padding:28px}.hl-bubble{border:1px solid #dbe3ee;border-radius:22px;padding:18px;margin:10px 0 18px;background:#fff}.hl-bubble span{display:inline-block;background:#e8f0ff;color:#1d4ed8;border-radius:99px;padding:6px 10px;font-size:13px;font-weight:800;margin-bottom:10px}.hl-bubble h2{margin:0 0 8px;font-size:30px}.hl-bubble p{margin:0;color:#64748b;line-height:1.7}.hl-link{border:0;background:transparent;color:#1d4ed8;text-decoration:underline;font-weight:800;margin-bottom:8px}.hl-choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.hl-choices button,.hl-editgrid button{min-height:64px;text-align:left;border:1px solid #dbe3ee;border-radius:18px;background:#fff;padding:14px 16px;box-shadow:0 8px 18px rgba(15,23,42,.04)}.hl-choices button:hover,.hl-editgrid button:hover{border-color:#93b4ff;background:#f8fbff}.hl-choices b,.hl-editgrid b{display:block}.hl-choices small,.hl-editgrid small{display:block;color:#64748b;margin-top:5px}.hl-form{border:1px solid #dbe3ee;border-radius:20px;padding:16px}.hl-form label{display:block;font-weight:800;margin-bottom:8px}.hl-form input,.hl-form textarea{width:100%;border:1.5px solid #cbd5e1;border-radius:16px;padding:14px;background:#fbfdff}.hl-form textarea{min-height:132px;resize:vertical}.hl-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}.hl-actions button,.hl-review button{border:1px solid #dbe3ee;border-radius:14px;padding:12px 16px;min-height:46px;font-weight:800;background:#fff}.hl-actions .hl-primary,.hl-primary{background:#2563eb;color:#fff;border-color:#2563eb}.hl-error{margin-top:12px;background:#fef2f2;color:#991b1b;border:1px solid #fecaca;border-radius:14px;padding:10px 12px;font-weight:700}.hl-notice{background:#e7f7ef;border:1px solid #b7ead2;color:#065f46;border-radius:18px;padding:14px 16px;line-height:1.65;margin-bottom:16px}.hl-summary{display:grid;grid-template-columns:1fr 1fr;gap:12px}.hl-summary div,.hl-review div{border:1px solid #dbe3ee;border-radius:18px;padding:14px}.hl-summary h3{margin:0 0 8px;color:#64748b;font-size:14px}.hl-summary p,.hl-review p{white-space:pre-wrap;line-height:1.65}.hl-review{display:grid;gap:10px}.hl-review div{display:grid;grid-template-columns:180px 1fr auto;gap:14px;align-items:center}.hl-review b{color:#64748b}.hl-review p{margin:0}details{background:#f8fafc;border:1px solid #dbe3ee;border-radius:18px;padding:14px 16px;margin-top:14px}summary{cursor:pointer;font-weight:900}pre{white-space:pre-wrap;background:#0f172a;color:#e2e8f0;border-radius:16px;padding:14px;overflow:auto}table{border-collapse:collapse;width:100%;background:white;margin-top:10px}th,td{border:1px solid #dbe3ee;padding:8px;text-align:left;vertical-align:top}th{background:#f1f5f9;width:210px}.hl-editgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.hl-done{text-align:center}.hl-check{width:74px;height:74px;margin:0 auto 18px;border-radius:24px;display:grid;place-items:center;background:#e7f7ef;color:#047857;font-weight:1000;font-size:34px}@media(max-width:820px){.hl-top{flex-direction:column}.hl-status{grid-template-columns:1fr}.hl-choices,.hl-summary,.hl-editgrid{grid-template-columns:1fr}.hl-review div{grid-template-columns:1fr}.hl-panel{padding:18px}.hl-bubble h2{font-size:24px}}
-`;

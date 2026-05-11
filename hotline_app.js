@@ -150,7 +150,7 @@
       phase: '00 大分類選択',
       label: '大分類',
       prompt: 'どの種類の相談ですか？',
-      helper: '分からない場合は「その他」で進めてください。AIは判定せず、すべて本部へ通知します。',
+      helper: '迷う場合は「その他」で進めてください。後から項目ごとに修正できます。',
       type: 'choice',
       choices: CATEGORIES
     }));
@@ -163,7 +163,7 @@
         phase: '01 ミス種類選択',
         label: 'ミスの種類',
         prompt: 'ミスの種類を選んでください。',
-        helper: '近いものを選んでください。最終判断はホットライン担当が行います。',
+        helper: '近いものを選んでください。迷う場合は「その他」で進めてください。',
         type: 'choice',
         choices: ERROR_TYPES.map((label) => ({ label, value: label }))
       }));
@@ -837,21 +837,26 @@
     const mode = options && options.mode;
     const category = state.answers.category || '未選択';
     const store = formatStore();
-    const policy = '全件Slack通知・AI判定なし';
+    const policy = '本部へ共有';
+    const stepLabel = supportStepLabel(mode);
+    const started = formatDateTime(state.startedAt);
     return `
       <div class="shell">
         <header class="topbar">
           <div class="brand">
-            <div class="brand-mark">HL</div>
-            <div>
-              <h1>ホットラインAIエージェント</h1>
-              <p>忙しい店舗でも、選択中心で本部相談に必要な情報を漏れなく整理します。</p>
+            <div class="brand-mark" aria-hidden="true">HL</div>
+            <div class="brand-copy">
+              <span class="app-kicker">店舗ホットライン</span>
+              <h1>本部相談受付</h1>
+              <p>選んで、必要なところだけ入力。確認してから送信できます。</p>
             </div>
           </div>
           <aside class="phone-box">
-            <strong>入力中でも電話に切替可能</strong>
-            <span>不安な場合は、従来どおりホットラインへ電話してください。アプリは判断を代行しません。</span>
-            <div class="actions" style="margin-top:10px">
+            <div>
+              <strong>入力が難しいときは電話へ</strong>
+              <span>画面入力を中断して、従来のホットラインに切り替えできます。</span>
+            </div>
+            <div class="actions actions-compact">
               <button class="btn btn-warn" id="phoneFallback">電話相談に切替</button>
             </div>
           </aside>
@@ -862,26 +867,49 @@
             <div class="status-strip">
               <div class="status-item"><b>分類</b><span>${escapeHtml(category)}</span></div>
               <div class="status-item"><b>店舗</b><span>${escapeHtml(store)}</span></div>
-              <div class="status-item"><b>送信方針</b><span>${escapeHtml(policy)}</span></div>
+              <div class="status-item"><b>現在</b><span>${escapeHtml(stepLabel)}</span></div>
+              <div class="status-item"><b>送信先</b><span>${escapeHtml(policy)}</span></div>
             </div>
             <div class="content">
               ${contentHtml}
             </div>
           </section>
-          <aside class="side-panel">
-            <h3>安心して進めるための前提</h3>
-            <ul class="side-list">
-              <li><b>AIは判定しません</b>ミスレベルや対応要否は本部・ホットライン担当が確認します。</li>
-              <li><b>選択中心です</b>文章入力が必要な箇所は、読みやすく要約してから確認します。</li>
-              <li><b>途中修正できます</b>前の回答に戻っても、最初からやり直す必要はありません。</li>
-              <li><b>下書き自動保存</b>同じブラウザでは入力途中から再開できます。</li>
-            </ul>
+          <aside class="support-panel" aria-label="入力サポート">
+            <div class="support-card support-primary">
+              <span class="support-label">入力ガイド</span>
+              <h3>3つの流れで完了します</h3>
+              <ol class="support-steps">
+                <li><span>1</span><b>選ぶ</b><small>近い項目をタップ</small></li>
+                <li><span>2</span><b>入力する</b><small>必要なところだけ</small></li>
+                <li><span>3</span><b>確認する</b><small>送信前に修正可能</small></li>
+              </ol>
+            </div>
+            <div class="support-card">
+              <h3>受付メモ</h3>
+              <dl class="meta-list">
+                <div><dt>受付番号</dt><dd>${escapeHtml(state.ticketId)}</dd></div>
+                <div><dt>開始</dt><dd>${escapeHtml(started)}</dd></div>
+                <div><dt>下書き</dt><dd>自動保存中</dd></div>
+              </dl>
+            </div>
+            <div class="support-card support-soft">
+              <h3>迷ったとき</h3>
+              <p>分からない項目は「不明」「その他」で進めてください。あとから項目ごとに直せます。</p>
+            </div>
             <div class="actions">
               ${mode !== 'done' ? '<button class="btn btn-ghost" id="clearDraft">下書きを破棄</button>' : ''}
             </div>
           </aside>
         </main>
       </div>`;
+  }
+
+  function supportStepLabel(mode) {
+    if (mode === 'summary') return '要約確認';
+    if (mode === 'review') return '内容確認';
+    if (mode === 'editList' || mode === 'editQuestion') return '修正中';
+    if (mode === 'done') return '送信完了';
+    return '入力中';
   }
 
   function progressHtml() {
@@ -896,7 +924,7 @@
           <span>入力進捗：${escapeHtml(done)} / ${escapeHtml(total)} 項目</span>
           <span>${escapeHtml(current)}問目</span>
         </div>
-        <div class="progress-bar" aria-hidden="true"><div class="progress-fill" style="width:${percent}%"></div></div>
+        <div class="progress-bar" aria-hidden="true"><div class="progress-fill" data-progress="${percent}"></div></div>
       </div>`;
   }
 
@@ -1076,7 +1104,7 @@
         <div class="done-icon">✓</div>
         <h2>本部への相談を受け付けました</h2>
         <p>Slack通知と管理表記入のモック処理が完了しました。実運用版では、このタイミングで #ホットライン報告 へ投稿し、管理表へ24列で自動転記します。</p>
-        <div class="notice notice-safe" style="text-align:left; max-width:760px; margin:0 auto 18px;">
+        <div class="notice notice-safe done-receipt">
           受付番号：<b>${escapeHtml(state.ticketId)}</b><br>
           受付時刻：${escapeHtml(submitted)}<br>
           Slack通知：通知済み ／ 管理表：記入済み
@@ -1086,7 +1114,7 @@
           <div class="step-card"><b>2. PSVまたは営業部長から店舗へ電話連絡があります</b>対応方法の指示がありますので、店舗では連絡を受けられる状態にしてください。</div>
           <div class="step-card"><b>3. 対応完了後はPSVへ完了連絡をお願いします</b>必要に応じて管理表のステータスを本部側で更新します。</div>
         </div>
-        <div class="actions" style="justify-content:center;">
+        <div class="actions actions-center">
           <button class="btn btn-primary" id="newReport">別件を報告する</button>
           <button class="btn btn-ghost" id="backToReview">通知内容を確認する</button>
         </div>
@@ -1116,6 +1144,15 @@
         if (event.target === modal) closePhoneModal();
       });
     }
+
+    applyProgress();
+  }
+
+  function applyProgress() {
+    const fill = document.querySelector('.progress-fill');
+    if (!fill) return;
+    const value = Number(fill.dataset.progress || 0);
+    fill.style.width = `${Math.max(0, Math.min(100, value))}%`;
   }
 
   function bindQuestionActions() {
