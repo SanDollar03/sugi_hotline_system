@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+const { useEffect, useMemo, useRef, useState } = React;
 
 const CATEGORY_OPTIONS = [
   { value: '調剤ミス', label: '調剤ミス', description: '薬の間違い・数量間違い・渡し忘れなど' },
@@ -786,7 +786,7 @@ function buildSheetRow(answers, now = new Date()) {
   };
 }
 
-export default function HotlineAIAgentV3() {
+function HotlineAIAgentV3() {
   const [answers, setAnswers] = useState({});
   const [sources, setSources] = useState({});
   const [messages, setMessages] = useState(makeInitialMessages);
@@ -1987,3 +1987,5 @@ const styles = `
     }
   }
 `;
+
+ReactDOM.createRoot(document.getElementById('root')).render(<HotlineAIAgentV3 />);

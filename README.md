@@ -1,67 +1,50 @@
-# チャットでかんたん操作 Webアプリテンプレート
+# ホットラインAIエージェント v3.1 チャットボットUI版
 
-目が悪い人、デジタル操作が苦手な人でも迷いにくいように、チャットボット風のUIにした静的HTMLテンプレートです。
+## 変更点
 
-## 改善内容
+- 画面全体をチャットボットエリアに変更
+- ユーザーが見る範囲を「会話履歴」と「回答入力エリア」に限定
+- 大きな文字、大きな選択ボタン、明確な操作エリアを採用
+- オペレーターの温かい言葉をチャット吹き出し形式で表示
+- 仕様書の10ステップ、動的分岐、AI要約確認、修正フロー、バリデーションをReact単体で実装
+- Slack通知・管理表転記はプロトタイプ用モックとして画面表示
 
-- 青いボタンを押すと、実際に次の会話ステップへ進むように修正
-- オペレーターの案内をチャットボット風の吹き出しUIに変更
-- 操作対象を画面下部の青いボタンに統一
-- 本文を大きく、入力欄とボタンも大きく表示
-- 「まだ確定ではありません」「空欄でも進めます」など、不安を減らす文言を追加
-- 文字をさらに大きくするボタンを追加
-- GitHub Pagesでそのまま公開可能
+## 対象ファイル
 
-## ファイル構成
+- `src/hotline_ai_agent_v3.jsx`
+- ルートにも同じ `hotline_ai_agent_v3.jsx` を同梱しています。
+
+## GitHub Pagesでそのまま公開する場合
+
+このZIPの中身をGitHubリポジトリ直下へ置いてください。
+
+最低限必要なファイルは以下です。
 
 ```text
-friendly_chatbot_webapp/
-├─ index.html
-├─ style.css
-├─ script.js
-└─ README.md
+index.html
+standalone_hotline_ai_agent_v3.jsx
 ```
 
-## GitHub Pagesで公開する手順
+`index.html` は、GitHub Pagesで直接表示できるようにReactとBabelをCDNから読み込むプロトタイプ構成です。
 
-1. GitHubの対象リポジトリを開きます。
-2. このフォルダ内の `index.html`, `style.css`, `script.js`, `README.md` をリポジトリ直下にアップロードします。
-3. `Settings` を開きます。
-4. 左メニューの `Pages` を開きます。
-5. `Build and deployment` で `Deploy from a branch` を選びます。
-6. Branch を `main`、フォルダを `/root` にします。
-7. `Save` を押します。
-8. 表示されたURLにアクセスします。
+## React / Viteで開発する場合
 
-## 主なカスタマイズ箇所
+Vite構成で開発したい場合は、`index.vite.html` を `index.html` にリネームしてから使用してください。
 
-### タイトル
-
-`index.html` の以下を書き換えます。
-
-```html
-<h1 id="pageTitle">チャットでかんたん操作</h1>
+```bash
+npm install
+npm run dev
 ```
 
-### チャットの言葉
+ビルドする場合：
 
-`script.js` の `addMessage("bot", "...")` の文章を書き換えます。
-
-### 選択肢
-
-`script.js` の `purposeLabels` と `renderOperationPanel()` 内の選択肢ボタンを書き換えます。
-
-### 色
-
-`style.css` の `:root` 内を書き換えます。
-
-```css
---primary: #1d4ed8;
---primary-dark: #143fba;
---primary-soft: #e8f0ff;
+```bash
+npm run build
 ```
 
-## 注意
+## プロトタイプ上の注意
 
-このテンプレートはHTML/CSS/JavaScriptだけで動く静的Webアプリです。
-サーバー保存、ログイン、データベース連携などは含みません。
+- Slack API、Google Sheets API、Claude APIは未接続です。
+- 送信時は「通知済み」「管理表記入済み」のモック表示を行います。
+- AI要約はルールベースの簡易処理です。
+- 実運用ではAPI連携、認証、セッション管理、ログ保管が必要です。

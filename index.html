@@ -1,63 +1,21 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>チャットでかんたん操作</title>
-  <link rel="stylesheet" href="./style.css" />
-</head>
-<body>
-  <a class="skip-link" href="#chatApp">チャット画面へ移動する</a>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ホットラインAIエージェント</title>
+    <meta name="description" content="チャットボット形式でホットライン報告を整理するプロトタイプ" />
+  </head>
+  <body>
+    <div id="root"></div>
 
-  <main id="chatApp" class="app" aria-labelledby="pageTitle">
-    <header class="app-header">
-      <div>
-        <span class="eyebrow">やさしいチャット案内</span>
-        <h1 id="pageTitle">チャットでかんたん操作</h1>
-        <p class="lead">
-          画面の案内に答えるだけで、順番に進めます。操作する場所は大きな青いボタンです。
-        </p>
-      </div>
-
-      <button class="text-size-button" type="button" id="toggleTextSizeButton">
-        文字をさらに大きくする
-      </button>
-    </header>
-
-    <section class="guide-card" aria-label="安心のための案内">
-      <div class="guide-icon" aria-hidden="true">案</div>
-      <div>
-        <p class="guide-name">案内スタッフ</p>
-        <p>
-          こんにちは。私が一つずつご案内します。迷ったときは、青いボタンだけ見てください。
-          すぐに確定される操作はありません。
-        </p>
-      </div>
-    </section>
-
-    <section class="chat-shell" aria-label="チャット形式の操作画面">
-      <div class="chat-topbar">
-        <div class="bot-avatar" aria-hidden="true">案</div>
-        <div>
-          <p class="bot-name">案内スタッフ</p>
-          <p class="bot-status">ゆっくり進められます</p>
-        </div>
-      </div>
-
-      <div id="chatMessages" class="chat-messages" aria-live="polite" aria-relevant="additions text"></div>
-
-      <div id="operationPanel" class="operation-panel" aria-label="次に操作する場所"></div>
-    </section>
-
-    <section class="safety-note" aria-label="補足">
-      <h2>操作に迷ったとき</h2>
-      <p>
-        一番下に表示される青いボタンを押すと次に進みます。
-        やり直したい場合は「はじめからやり直す」を押してください。
-      </p>
-    </section>
-  </main>
-
-  <script src="./script.js"></script>
-</body>
+    <!--
+      GitHub Pagesへそのまま置いて動かすためのプロトタイプ用CDN構成です。
+      実運用・本番ビルドでは Vite / Next.js 等でバンドルしてください。
+    -->
+    <script src="https://unpkg.com/react@18.3.1/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone@7.25.6/babel.min.js"></script>
+    <script type="text/babel" data-presets="react" src="./standalone_hotline_ai_agent_v3.jsx"></script>
+  </body>
 </html>
