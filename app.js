@@ -405,7 +405,7 @@
         label: QUESTION_LABELS.true_false_info,
         type: "textarea",
         bot: () => trueFalsePrompt(),
-        placeholder: "例：\n正）フロセミド錠10㎎　スピロノラクトン錠20㎎　1日1回朝食後　14日分\n誤）フロセミド錠10㎎　スピロノラクトン錠20㎎　1日1回夕食後　14日分",
+        placeholder: "例：フロセミド錠10㎎　スピロノラクトン錠20㎎　1日1回朝食後　14日分",
         help: "文章が整っていなくても大丈夫です。必要に応じてAIが要約確認します。",
         summarize: () => state.answers.mistake_type === "疑義照会漏れ"
       },
