@@ -1,14 +1,18 @@
 (function () {
   "use strict";
 
+  const CATEGORIES = {
+    DISPENSING: "Ⅰ. 調剤ミス",
+    PRIVACY: "Ⅱ. 個人情報漏洩",
+    CONTROLLED_LOSS: "Ⅲ. 管理薬剤の紛失",
+    OTHER: "Ⅳ. その他トラブル"
+  };
+
   const CATEGORY_OPTIONS = [
-    "調剤ミス",
-    "個人情報漏洩",
-    "管理薬剤の紛失",
-    "クレーム",
-    "事故",
-    "法令遵守違反",
-    "その他"
+    CATEGORIES.DISPENSING,
+    CATEGORIES.PRIVACY,
+    CATEGORIES.CONTROLLED_LOSS,
+    CATEGORIES.OTHER
   ];
 
   const MISTAKE_TYPES = [
@@ -28,16 +32,82 @@
     "その他"
   ];
 
-  const AGE_GROUPS = [
-    "10歳未満", "10代", "20代", "30代", "40代", "50代", "60代", "70代", "80代以上", "不明"
-  ];
-
+  const HEADQUARTER_OPTIONS = ["医療営業本部", "阪神調剤営業本部"];
   const PATIENT_REACTIONS = ["お怒り", "体調不良", "不安", "問題なし", "未接触", "不明"];
-  const DISCOVERY_ROUTES = ["薬局内で発見", "患者様から", "医療機関から", "本部・他部署から", "その他", "不明"];
-  const ACTION_STATUSES = ["未対応", "対応中", "対応予定あり", "対応済み"];
+  const YES_NO = ["あり", "なし"];
+  const YES_NO_UNKNOWN = ["あり", "なし", "不明"];
+
+  const QUESTION_LABELS = {
+    category: "分類",
+    mistake_type: "ミスの種類",
+    headquarter: "本部区分",
+    store_code: "店番",
+    store_name: "店舗名",
+    medical_institution: "医療機関名",
+    dose_date: "投薬日",
+    discovery_date: "発覚日",
+    patient_type: "新患/既患",
+    patient_gender: "患者性別",
+    patient_age: "患者年齢",
+    true_false_info: "正誤情報",
+    input_error: "入力ミスの有無",
+    taken: "服用の有無",
+    taken_count: "服用回数",
+    health: "健康被害",
+    health_detail: "症状詳細",
+    finder: "発見者",
+    discovery_detail: "発覚の経緯",
+    patient_reaction: "患者様・関係者の状態",
+    medical_report: "医療機関への報告",
+    patient_action_detail: "対応状況（患者）",
+    external_action_detail: "対応状況（外部）",
+    occurrence_date: "発生日",
+    leaked_document: "漏洩した書類名・データ",
+    privacy_who_to_whom: "誰の何を誰に渡したか",
+    recovery_action: "対応状況（回収対応）",
+    leak_destination_action: "対応状況（漏洩先への対応）",
+    secondary_complaint: "2次クレームへの発展",
+    controlled_class: "紛失医薬品の分類",
+    controlled_medicine_name: "医薬品名",
+    controlled_lost_qty: "紛失した数量",
+    controlled_search_detail: "捜索状況",
+    incident_summary: "事件・事故の概要",
+    incident_detail: "事件・事故の内容詳細",
+    occurrence_datetime: "発生日時",
+    post_incident_action: "発生後の対応",
+    facility_homecare: "速報判断：施設在宅関与",
+    facility_name: "施設名",
+    urgent_narcotic_related: "速報判断：麻薬・覚醒剤原料の関与",
+    urgent_external_contact: "速報判断：保健所等社外対応",
+    urgent_secondary_complaint: "速報判断：2次クレーム",
+    urgent_taken: "速報判断：服用の有無",
+    urgent_health: "速報判断：健康被害",
+    urgent_health_detail: "速報判断：健康被害の内容",
+    urgent_hospitalized: "速報判断：入院の有無",
+    supplement: "補足事項"
+  };
+
+  const STORE_MASTER = {
+    "000769": {
+      sales_department: "第1医療営業部",
+      district: "大阪北地区",
+      psv_name: "佐藤PSV"
+    },
+    "000001": {
+      sales_department: "第1医療営業部",
+      district: "モデル地区",
+      psv_name: "山田PSV"
+    },
+    "999999": {
+      sales_department: "阪神調剤営業部",
+      district: "検証地区",
+      psv_name: "田中PSV"
+    }
+  };
 
   const state = {
     answers: {},
+    drafts: {},
     messages: [],
     currentKey: null,
     mode: "question",
@@ -45,7 +115,15 @@
     editReturn: null,
     error: "",
     startedAt: new Date(),
-    completedId: ""
+    completedId: "",
+    voice: {
+      listening: false,
+      targetKey: "",
+      mode: "",
+      transcript: "",
+      message: "",
+      error: ""
+    }
   };
 
   const chatLog = document.getElementById("chatLog");
@@ -56,12 +134,55 @@
   const fontButton = document.getElementById("fontButton");
   const resetButton = document.getElementById("resetButton");
 
+  let recognitionInstance = null;
+
+  function setAppHeight() {
+    const viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    if (viewportHeight) {
+      document.documentElement.style.setProperty("--app-height", `${viewportHeight}px`);
+    }
+  }
+
+  function preventViewportZoom() {
+    let lastTouchEnd = 0;
+    document.addEventListener("gesturestart", (event) => event.preventDefault());
+    document.addEventListener("gesturechange", (event) => event.preventDefault());
+    document.addEventListener("dblclick", (event) => event.preventDefault(), { passive: false });
+    document.addEventListener("touchend", (event) => {
+      const now = Date.now();
+      if (now - lastTouchEnd <= 300) event.preventDefault();
+      lastTouchEnd = now;
+    }, { passive: false });
+    document.addEventListener("wheel", (event) => {
+      if (event.ctrlKey) event.preventDefault();
+    }, { passive: false });
+  }
+
+  function bindViewportGuards() {
+    setAppHeight();
+    window.addEventListener("resize", setAppHeight);
+    window.addEventListener("orientationchange", setAppHeight);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", setAppHeight);
+      window.visualViewport.addEventListener("scroll", setAppHeight);
+    }
+    preventViewportZoom();
+  }
+
   function pad2(value) {
     return String(value).padStart(2, "0");
   }
 
   function formatDate(date) {
     return `${date.getFullYear()}/${pad2(date.getMonth() + 1)}/${pad2(date.getDate())}`;
+  }
+
+  function formatTime(date) {
+    return `${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
+  }
+
+  function formatDateTime(date) {
+    return `${formatDate(date)} ${formatTime(date)}`;
   }
 
   function recentDateOptions() {
@@ -89,11 +210,46 @@
   }
 
   function isDispensing() {
-    return state.answers.category === "調剤ミス";
+    return state.answers.category === CATEGORIES.DISPENSING;
+  }
+
+  function isPrivacy() {
+    return state.answers.category === CATEGORIES.PRIVACY;
   }
 
   function isControlledLoss() {
-    return state.answers.category === "管理薬剤の紛失";
+    return state.answers.category === CATEGORIES.CONTROLLED_LOSS;
+  }
+
+  function isOtherTrouble() {
+    return state.answers.category === CATEGORIES.OTHER;
+  }
+
+  function isYes(value) {
+    const text = String(value || "").trim();
+    return text === "あり" || text === "有" || text.startsWith("あり") || text.includes("あり（");
+  }
+
+  function isTakenYes() {
+    return state.answers.taken === "服用した" || isYes(state.answers.urgent_taken);
+  }
+
+  function isHealthYes() {
+    return state.answers.health === "あり（症状あり）" || isYes(state.answers.urgent_health);
+  }
+
+  function getSecondaryComplaintValue() {
+    return state.answers.secondary_complaint || state.answers.urgent_secondary_complaint || "";
+  }
+
+  function parsePatientAge(value) {
+    const text = String(value || "").trim();
+    if (!text || text === "不明") return null;
+    const hankaku = text.replace(/[０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0));
+    const match = hankaku.match(/\d+(?:\.\d+)?/);
+    if (!match) return null;
+    const age = Number(match[0]);
+    return Number.isFinite(age) ? age : null;
   }
 
   function trueFalsePrompt() {
@@ -113,20 +269,52 @@
     return "正しい内容と、実際に起きた内容を入力してください。薬剤名・数量・規格など、分かる範囲で大丈夫です。";
   }
 
+  function lookupStoreInfo() {
+    const code = String(state.answers.store_code || "").trim();
+    if (!/^\d{6}$/.test(code)) {
+      return {
+        sales_department: "未反映",
+        district: "未反映",
+        psv_name: "未反映"
+      };
+    }
+
+    if (STORE_MASTER[code]) return STORE_MASTER[code];
+
+    const headquarter = state.answers.headquarter || "医療営業本部";
+    const lastDigit = Number(code.slice(-1));
+    const departmentIndex = Number.isFinite(lastDigit) ? (lastDigit % 4) + 1 : 1;
+    const districtNames = headquarter === "阪神調剤営業本部"
+      ? ["阪神第1地区", "阪神第2地区", "阪神第3地区", "阪神第4地区"]
+      : ["東日本地区", "中日本地区", "西日本地区", "関西地区"];
+    const psvNames = ["佐藤PSV", "鈴木PSV", "田中PSV", "高橋PSV"];
+
+    return {
+      sales_department: headquarter === "阪神調剤営業本部" ? `阪神調剤第${departmentIndex}営業部` : `第${departmentIndex}医療営業部`,
+      district: districtNames[departmentIndex - 1],
+      psv_name: psvNames[departmentIndex - 1]
+    };
+  }
+
   function makeQuestions() {
     const dateOptions = recentDateOptions();
-    return [
-      {
-        key: "category",
-        label: "分類",
-        type: "choice",
-        choices: CATEGORY_OPTIONS,
-        bot: "まず、今回の内容に近い分類を選んでください。AIは重大度を判定しません。すべてホットラインへ共有され、人が確認します。",
-        help: "迷う場合は、いちばん近いものを選んでください。最後に修正できます。"
-      },
+
+    const categoryQuestion = {
+      key: "category",
+      label: QUESTION_LABELS.category,
+      type: "choice",
+      choices: CATEGORY_OPTIONS,
+      bot: "まず、今回の内容に近い分類を選んでください。AIは重大度を判定しません。すべてホットラインへ共有され、人が確認します。",
+      help: "迷う場合は、いちばん近いものを選んでください。最後に修正できます。"
+    };
+
+    if (!hasAnswer("category")) return [categoryQuestion];
+
+    const commonQuestions = [
+      categoryQuestion,
       {
         key: "mistake_type",
-        label: "ミスの種類",
+        label: QUESTION_LABELS.mistake_type,
         type: "choice",
         choices: MISTAKE_TYPES,
         condition: () => isDispensing(),
@@ -134,45 +322,54 @@
         help: "この選択に合わせて、後の質問を自動で調整します。"
       },
       {
+        key: "headquarter",
+        label: QUESTION_LABELS.headquarter,
+        type: "choice",
+        choices: HEADQUARTER_OPTIONS,
+        bot: "本部区分を選んでください。店番入力後に、営業部・地区名・PSV名を自動で反映します。",
+        help: "該当する本部を選んでください。迷う場合は、普段の所属区分に近いものを選んでください。"
+      },
+      {
         key: "store_code",
-        label: "店番",
+        label: QUESTION_LABELS.store_code,
         type: "text",
         inputMode: "numeric",
         maxLength: 6,
         bot: "次に、店舗を確認します。店番を6桁の数字で入力してください。",
         placeholder: "例：000769",
-        help: "6桁の数字のみです。ハイフンや店舗名は入れないでください。",
+        help: "6桁の数字のみです。ハイフンや店舗名は入れないでください。音声入力の場合は、数字を一桁ずつ話しても入力できます。",
         validate: (value) => /^\d{6}$/.test(value.trim()) ? "" : "店番は6桁の数字で入力してください。例：000769"
       },
       {
         key: "store_name",
-        label: "店舗名",
+        label: QUESTION_LABELS.store_name,
         type: "text",
         bot: "店舗名を入力してください。店番と店舗名の両方を記録します。",
-        placeholder: "例：〇〇薬局 〇〇店",
+        placeholder: "例：スギ薬局 〇〇店",
         help: "正式名称が分からない場合は、普段使っている店舗名で大丈夫です。"
-      },
+      }
+    ];
+
+    const dispensingQuestions = [
       {
         key: "medical_institution",
-        label: "医療機関名",
+        label: QUESTION_LABELS.medical_institution,
         type: "text",
-        condition: () => isDispensing(),
         bot: "処方元の医療機関名を入力してください。",
         placeholder: "例：〇〇クリニック",
         help: "分かる範囲で入力してください。"
       },
       {
         key: "dose_date",
-        label: "投薬日",
+        label: QUESTION_LABELS.dose_date,
         type: "choice",
         choices: dateOptions,
-        condition: () => isDispensing(),
         bot: "投薬日を選んでください。正確でなくても、分かる範囲で大丈夫です。",
         help: "一覧にない場合は「それ以前」または「不明」を選べます。"
       },
       {
         key: "discovery_date",
-        label: "発覚日",
+        label: QUESTION_LABELS.discovery_date,
         type: "choice",
         choices: dateOptions,
         bot: "発覚日を選んでください。",
@@ -180,254 +377,454 @@
       },
       {
         key: "patient_type",
-        label: "新患/既患",
+        label: QUESTION_LABELS.patient_type,
         type: "choice",
         choices: ["新患（初めて）", "既患", "不明"],
-        condition: () => isDispensing(),
         bot: "患者様は新患か既患かを選んでください。",
         help: "分からない場合は「不明」で進められます。"
       },
       {
-        key: "age_group",
-        label: "年齢層",
+        key: "patient_gender",
+        label: QUESTION_LABELS.patient_gender,
         type: "choice",
-        choices: AGE_GROUPS,
-        condition: () => isDispensing(),
-        bot: "患者様の年齢層を選んでください。",
-        help: "個人を特定できる情報は、必要以上に入力しないでください。"
+        choices: ["男性", "女性", "その他", "不明"],
+        bot: "患者様の性別を選んでください。",
+        help: "分からない場合は「不明」で進められます。"
+      },
+      {
+        key: "patient_age",
+        label: QUESTION_LABELS.patient_age,
+        type: "text",
+        inputMode: "numeric",
+        bot: "患者様の年齢を入力してください。分からない場合は「不明」と入力してください。",
+        placeholder: "例：5歳、72歳、不明",
+        help: "6歳未満の服用がある場合は速報対象になります。年齢が分からない場合は不明で進めてください。"
       },
       {
         key: "true_false_info",
-        label: "正誤情報",
+        label: QUESTION_LABELS.true_false_info,
         type: "textarea",
-        condition: () => isDispensing(),
         bot: () => trueFalsePrompt(),
         placeholder: "例：正しくはA薬10mg、実際はA薬5mgをお渡しした。数量は14錠のところ7錠だった。",
         help: "文章が整っていなくても大丈夫です。必要に応じてAIが要約確認します。",
         summarize: () => state.answers.mistake_type === "疑義照会漏れ"
       },
       {
+        key: "input_error",
+        label: QUESTION_LABELS.input_error,
+        type: "choice",
+        choices: ["有", "無", "不明"],
+        bot: "今回の調剤ミスに、入力ミスや入力漏れが関係していますか。",
+        help: "現時点で分かる範囲で選んでください。"
+      },
+      {
         key: "taken",
-        label: "服用の有無",
+        label: QUESTION_LABELS.taken,
         type: "choice",
         choices: ["服用した", "服用していない", "不明"],
-        condition: () => isDispensing(),
         bot: "患者様が実際に服用したかを選んでください。",
         help: "分からない場合は「不明」で進めてください。"
       },
       {
         key: "taken_count",
-        label: "服用回数",
+        label: QUESTION_LABELS.taken_count,
         type: "text",
-        condition: () => isDispensing() && state.answers.taken === "服用した",
+        condition: () => state.answers.taken === "服用した",
         bot: "服用した回数や日数を、分かる範囲で入力してください。",
         placeholder: "例：1回のみ、朝夕2回、3日分など",
         help: "正確な回数が不明な場合は「不明」と入力できます。"
       },
       {
         key: "health",
-        label: "健康被害",
+        label: QUESTION_LABELS.health,
         type: "choice",
         choices: ["あり（症状あり）", "なし", "不明"],
-        condition: () => isDispensing(),
         bot: "健康被害や症状の有無を選んでください。AIは判断せず、そのままホットラインへ共有します。",
         help: "判断に迷う場合は「不明」で進めてください。"
       },
       {
         key: "health_detail",
-        label: "症状詳細",
+        label: QUESTION_LABELS.health_detail,
         type: "textarea",
-        condition: () => isDispensing() && state.answers.health === "あり（症状あり）",
+        condition: () => state.answers.health === "あり（症状あり）",
         bot: "症状について、聞いている範囲で入力してください。後でAIが短く整理します。",
         placeholder: "例：服用後にめまいを訴えた。現在は自宅で様子を見ている。受診予定は未確認。",
         help: "診断や判断ではなく、確認できている事実だけで大丈夫です。",
         summarize: () => true
       },
       {
-        key: "patient_reaction",
-        label: "患者様の状態・反応",
+        key: "finder",
+        label: QUESTION_LABELS.finder,
         type: "choice",
-        choices: PATIENT_REACTIONS,
-        condition: () => !isControlledLoss(),
-        bot: "患者様の現在の状態や反応に近いものを選んでください。",
-        help: "管理薬剤の紛失では、この質問は自動的に省略されます。"
+        choices: ["患者", "薬局", "その他", "不明"],
+        bot: "今回の事案は誰が発見しましたか。",
+        help: "近いものを選んでください。"
       },
       {
-        key: "privacy_type",
-        label: "漏洩した情報の種類",
-        type: "choice",
-        choices: ["処方せん", "お薬手帳", "薬袋・薬情", "会計情報", "患者情報の口頭漏洩", "その他", "不明"],
-        condition: () => state.answers.category === "個人情報漏洩",
-        bot: "漏洩した可能性がある情報の種類を選んでください。",
-        help: "複数ある場合は、主なものを選び、次の欄に補足してください。"
-      },
-      {
-        key: "privacy_detail",
-        label: "個人情報漏洩の詳細",
+        key: "discovery_detail",
+        label: QUESTION_LABELS.discovery_detail,
         type: "textarea",
-        condition: () => state.answers.category === "個人情報漏洩",
-        bot: "どのような状況だったかを入力してください。AIが短く整理して確認します。",
-        placeholder: "例：A様に渡す予定のお薬手帳を、誤ってB様に渡した可能性がある。現在回収確認中。",
-        help: "分かる範囲で、事実をそのまま入力してください。",
+        bot: "どのように発覚したかを入力してください。AIが読みやすく整理します。",
+        placeholder: "例：患者様から電話があり、薬剤が違う可能性があると連絡を受けた。",
+        help: "時系列が曖昧でも構いません。分かる範囲の事実を入力してください。",
         summarize: () => true
       },
       {
-        key: "privacy_recovery",
-        label: "回収状況",
+        key: "patient_reaction",
+        label: QUESTION_LABELS.patient_reaction,
         type: "choice",
-        choices: ["回収済み", "回収中", "未回収", "回収不要", "不明"],
-        condition: () => state.answers.category === "個人情報漏洩",
-        bot: "漏洩した資料などの回収状況を選んでください。",
-        help: "現時点の状況で大丈夫です。"
+        choices: PATIENT_REACTIONS,
+        bot: "患者様の現在の状態・反応に近いものを選んでください。",
+        help: "現時点で近いものを選んでください。"
       },
       {
-        key: "controlled_type",
-        label: "薬剤の種類",
+        key: "medical_report",
+        label: QUESTION_LABELS.medical_report,
         type: "choice",
-        choices: ["麻薬", "覚醒剤原料", "向精神薬", "毒薬・劇薬", "その他管理薬剤", "不明"],
-        condition: () => state.answers.category === "管理薬剤の紛失",
-        bot: "紛失した管理薬剤の種類を選んでください。",
+        choices: ["未報告", "報告済", "報告予定", "不要", "不明"],
+        bot: "医療機関への報告状況を選んでください。",
+        help: "現時点の状況を選んでください。"
+      },
+      {
+        key: "patient_action_detail",
+        label: QUESTION_LABELS.patient_action_detail,
+        type: "textarea",
+        bot: "現時点までの患者様への対応内容を入力してください。",
+        placeholder: "例：患者様へ電話連絡済み。薬剤回収のため来局を依頼。未対応の場合は未対応と入力。",
+        help: "対応途中でも大丈夫です。実施済み・予定していることを入力してください。",
+        summarize: () => true
+      },
+      {
+        key: "external_action_detail",
+        label: QUESTION_LABELS.external_action_detail,
+        type: "textarea",
+        bot: "医療機関・保健所など、店舗外への対応状況を入力してください。",
+        placeholder: "例：医療機関へ報告済み。保健所への相談は未実施。該当なしの場合は該当なしと入力。",
+        help: "未実施・該当なしの場合も、そのまま入力してください。",
+        summarize: () => true
+      }
+    ];
+
+    const privacyQuestions = [
+      {
+        key: "discovery_detail",
+        label: QUESTION_LABELS.discovery_detail,
+        type: "textarea",
+        bot: "どのように発覚したかを入力してください。AIが短く整理します。",
+        placeholder: "例：患者様から、他人のお薬手帳が入っていると連絡があった。",
+        help: "発覚の流れを分かる範囲で入力してください。",
+        summarize: () => true
+      },
+      {
+        key: "occurrence_date",
+        label: QUESTION_LABELS.occurrence_date,
+        type: "choice",
+        choices: dateOptions,
+        bot: "個人情報漏洩が発生した日を選んでください。",
+        help: "正確でない場合は「不明」または「それ以前」で進めてください。"
+      },
+      {
+        key: "discovery_date",
+        label: QUESTION_LABELS.discovery_date,
+        type: "choice",
+        choices: dateOptions,
+        bot: "発覚日を選んでください。",
+        help: "報告時点で分かる範囲で選んでください。"
+      },
+      {
+        key: "patient_reaction",
+        label: QUESTION_LABELS.patient_reaction,
+        type: "choice",
+        choices: PATIENT_REACTIONS,
+        bot: "患者様または関係者の現在の状態・反応に近いものを選んでください。",
+        help: "現時点で近いものを選んでください。"
+      },
+      {
+        key: "leaked_document",
+        label: QUESTION_LABELS.leaked_document,
+        type: "text",
+        bot: "漏洩した書類名やデータ名を入力してください。",
+        placeholder: "例：処方せん、お薬手帳、薬袋、会計情報など",
+        help: "複数ある場合は、分かる範囲で並べて入力してください。"
+      },
+      {
+        key: "privacy_who_to_whom",
+        label: QUESTION_LABELS.privacy_who_to_whom,
+        type: "textarea",
+        bot: "誰の何を、誰に渡したかを入力してください。AIが短く整理します。",
+        placeholder: "例：A様のお薬手帳を、誤ってB様に渡した可能性がある。",
+        help: "個人名は必要最小限で構いません。分かる範囲で入力してください。",
+        summarize: () => true
+      },
+      {
+        key: "recovery_action",
+        label: QUESTION_LABELS.recovery_action,
+        type: "textarea",
+        bot: "回収対応の状況を入力してください。",
+        placeholder: "例：B様へ連絡済み。お薬手帳は回収予定。まだ連絡が取れていない。",
+        help: "対応途中の内容で大丈夫です。",
+        summarize: () => true
+      },
+      {
+        key: "leak_destination_action",
+        label: QUESTION_LABELS.leak_destination_action,
+        type: "textarea",
+        bot: "漏洩先への説明・対応状況を入力してください。",
+        placeholder: "例：誤って受け取った方へ説明済み。内容を見ていないことを確認中。",
+        help: "現時点の状況を入力してください。",
+        summarize: () => true
+      },
+      {
+        key: "external_action_detail",
+        label: QUESTION_LABELS.external_action_detail,
+        type: "textarea",
+        bot: "医療機関・保健所など、店舗外への対応状況を入力してください。",
+        placeholder: "例：医療機関への報告は未実施。保健所への相談予定なし。",
+        help: "未実施・該当なしの場合も、そのまま入力してください。",
+        summarize: () => true
+      },
+      {
+        key: "secondary_complaint",
+        label: QUESTION_LABELS.secondary_complaint,
+        type: "choice",
+        choices: YES_NO_UNKNOWN,
+        bot: "2次クレームへ発展している、または発展しそうな状況はありますか。",
+        help: "現時点で分かる範囲で選んでください。"
+      }
+    ];
+
+    const controlledLossQuestions = [
+      {
+        key: "controlled_class",
+        label: QUESTION_LABELS.controlled_class,
+        type: "choice",
+        choices: ["麻薬", "覚醒剤原料", "毒薬", "向精神薬", "その他", "不明"],
+        bot: "紛失した医薬品の分類を選んでください。",
         help: "分類が分からない場合は「不明」で進めてください。"
       },
       {
-        key: "controlled_name_qty",
-        label: "薬剤名と数量",
-        type: "textarea",
-        condition: () => state.answers.category === "管理薬剤の紛失",
-        bot: "薬剤名と数量を、分かる範囲で入力してください。",
-        placeholder: "例：〇〇錠 10錠、数量確認中など",
+        key: "controlled_medicine_name",
+        label: QUESTION_LABELS.controlled_medicine_name,
+        type: "text",
+        bot: "医薬品名を入力してください。",
+        placeholder: "例：〇〇錠、〇〇散など",
+        help: "分かる範囲で入力してください。"
+      },
+      {
+        key: "controlled_lost_qty",
+        label: QUESTION_LABELS.controlled_lost_qty,
+        type: "text",
+        bot: "紛失した数量を入力してください。",
+        placeholder: "例：10錠、1本、数量確認中など",
         help: "不明点は不明のままで構いません。"
       },
       {
-        key: "controlled_search",
-        label: "捜索状況",
-        type: "choice",
-        choices: ["捜索中", "発見済み", "未捜索", "警察・行政へ相談済み", "不明"],
-        condition: () => state.answers.category === "管理薬剤の紛失",
-        bot: "現時点の捜索状況を選んでください。",
-        help: "対応途中でも問題ありません。"
-      },
-      {
-        key: "complaint_type",
-        label: "クレーム分類",
-        type: "choice",
-        choices: ["接遇", "待ち時間", "説明内容", "会計", "商品・在庫", "その他", "不明"],
-        condition: () => state.answers.category === "クレーム",
-        bot: "クレーム内容に近い分類を選んでください。",
-        help: "迷う場合は「その他」または「不明」で進められます。"
-      },
-      {
-        key: "complaint_detail",
-        label: "クレーム内容",
+        key: "discovery_detail",
+        label: QUESTION_LABELS.discovery_detail,
         type: "textarea",
-        condition: () => state.answers.category === "クレーム",
-        bot: "クレーム内容を入力してください。AIが短く整理して確認します。",
-        placeholder: "例：待ち時間が長いことについてお怒り。説明を求められている。",
-        help: "発言を完全に再現しなくても、要点で大丈夫です。",
+        bot: "どのように発覚したかを入力してください。AIが短く整理します。",
+        placeholder: "例：終業時の在庫確認で帳簿数量と実在庫が一致しないことに気づいた。",
+        help: "発覚の流れを分かる範囲で入力してください。",
         summarize: () => true
       },
       {
-        key: "complaint_risk",
-        label: "二次クレーム発展リスク",
+        key: "discovery_date",
+        label: QUESTION_LABELS.discovery_date,
         type: "choice",
-        choices: ["高い", "ありそう", "低い", "不明"],
-        condition: () => state.answers.category === "クレーム",
-        bot: "二次クレームに発展しそうか、現場感に近いものを選んでください。",
-        help: "これはAI判定ではなく、現時点の状況共有です。"
+        choices: dateOptions,
+        bot: "発覚日を選んでください。",
+        help: "報告時点で分かる範囲で選んでください。"
       },
       {
-        key: "accident_type",
-        label: "事故の種類",
-        type: "choice",
-        choices: ["車両事故", "針刺し事故", "転倒・転落", "設備事故", "その他", "不明"],
-        condition: () => state.answers.category === "事故",
-        bot: "事故の種類を選んでください。",
-        help: "近いものを選んでください。"
-      },
-      {
-        key: "injury",
-        label: "けが人の有無",
-        type: "choice",
-        choices: ["あり", "なし", "不明"],
-        condition: () => state.answers.category === "事故",
-        bot: "けが人の有無を選んでください。",
-        help: "判断が難しい場合は「不明」で進めてください。"
-      },
-      {
-        key: "accident_detail",
-        label: "事故の概要",
+        key: "controlled_search_detail",
+        label: QUESTION_LABELS.controlled_search_detail,
         type: "textarea",
-        condition: () => state.answers.category === "事故",
-        bot: "事故の概要を入力してください。AIが短く整理して確認します。",
+        bot: "捜索状況を入力してください。AIが短く整理します。",
+        placeholder: "例：調剤室内、廃棄ボックス、投薬した患者様への確認を実施中。",
+        help: "実施済み・確認中・未実施を分かる範囲で入力してください。",
+        summarize: () => true
+      },
+      {
+        key: "external_action_detail",
+        label: QUESTION_LABELS.external_action_detail,
+        type: "textarea",
+        bot: "医療機関・保健所など、店舗外への対応状況を入力してください。",
+        placeholder: "例：保健所へ相談予定。警察への連絡は未実施。該当なしの場合は該当なしと入力。",
+        help: "未実施・該当なしの場合も、そのまま入力してください。",
+        summarize: () => true
+      },
+      {
+        key: "secondary_complaint",
+        label: QUESTION_LABELS.secondary_complaint,
+        type: "choice",
+        choices: YES_NO_UNKNOWN,
+        bot: "2次クレームへ発展している、または発展しそうな状況はありますか。",
+        help: "現時点で分かる範囲で選んでください。"
+      }
+    ];
+
+    const otherTroubleQuestions = [
+      {
+        key: "incident_summary",
+        label: QUESTION_LABELS.incident_summary,
+        type: "textarea",
+        bot: "事件・事故の概要を入力してください。AIが短く整理します。",
         placeholder: "例：店舗駐車場で車両接触が発生。けが人は確認中。警察連絡は未実施。",
-        help: "分かっている事実だけを入力してください。",
+        help: "クレーム・事故・法令遵守違反・その他の相談をここに入力できます。",
         summarize: () => true
       },
       {
-        key: "violation_type",
-        label: "違反の種類",
-        type: "choice",
-        choices: ["法令違反の疑い", "偽造処方せん", "記録不備", "個別指導・行政関連", "その他", "不明"],
-        condition: () => state.answers.category === "法令遵守違反",
-        bot: "法令遵守違反に関する種類を選んでください。",
-        help: "AIは違反かどうかを判定しません。ホットライン担当が確認します。"
-      },
-      {
-        key: "violation_detail",
-        label: "法令違反内容",
+        key: "incident_detail",
+        label: QUESTION_LABELS.incident_detail,
         type: "textarea",
-        condition: () => state.answers.category === "法令遵守違反",
-        bot: "確認できている内容を入力してください。AIが短く整理して確認します。",
-        placeholder: "例：偽造処方せんの可能性があり、医療機関へ確認予定。",
-        help: "断定せず、確認できている事実を入力してください。",
+        bot: "事件・事故の内容詳細を入力してください。",
+        placeholder: "例：患者様から強い苦情があり、店舗責任者で一次対応中。詳細は確認中。",
+        help: "断定せず、確認できている事実だけで大丈夫です。",
         summarize: () => true
       },
       {
-        key: "other_detail",
-        label: "その他状況",
+        key: "occurrence_datetime",
+        label: QUESTION_LABELS.occurrence_datetime,
+        type: "text",
+        bot: "発生日時を入力してください。",
+        placeholder: "例：本日14時頃、2025/4/15 午前、不明",
+        help: "正確な時刻が分からない場合は、おおよその時間で大丈夫です。"
+      },
+      {
+        key: "discovery_detail",
+        label: QUESTION_LABELS.discovery_detail,
         type: "textarea",
-        condition: () => state.answers.category === "その他",
-        bot: "状況の概要を入力してください。AIが短く整理して確認します。",
-        placeholder: "例：分類に迷う事象が発生。ホットラインへ相談したい。",
-        help: "自由に入力できます。分かる範囲で大丈夫です。",
+        bot: "どのように発覚したかを入力してください。AIが読みやすく整理します。",
+        placeholder: "例：店舗スタッフから管理者へ連絡があり、状況を確認した。",
+        help: "時系列が曖昧でも構いません。分かる範囲の事実を入力してください。",
         summarize: () => true
       },
       {
-        key: "discovery_route",
-        label: "発覚経緯",
+        key: "patient_reaction",
+        label: QUESTION_LABELS.patient_reaction,
         type: "choice",
-        choices: DISCOVERY_ROUTES,
-        bot: "どのように発覚したかを選んでください。",
-        help: "近いものを選んでください。"
+        choices: PATIENT_REACTIONS,
+        bot: "患者様または関係者の現在の状態・反応に近いものを選んでください。",
+        help: "現時点で近いものを選んでください。"
       },
       {
-        key: "current_action",
-        label: "対応状況",
-        type: "choice",
-        choices: ACTION_STATUSES,
-        bot: "現在の対応状況を選んでください。未対応でも問題ありません。",
-        help: "この時点の状態をそのまま共有します。"
-      },
-      {
-        key: "action_detail",
-        label: "対応内容",
+        key: "post_incident_action",
+        label: QUESTION_LABELS.post_incident_action,
         type: "textarea",
-        condition: () => state.answers.current_action && state.answers.current_action !== "未対応",
-        bot: "対応内容を入力してください。AIが短く整理して確認します。",
-        placeholder: "例：患者様へ電話連絡済み。薬剤回収のため来局を依頼。医師への連絡はこれから。",
-        help: "途中経過で大丈夫です。事実だけ入力してください。",
+        bot: "発生後の対応を入力してください。AIが短く整理します。",
+        placeholder: "例：店舗責任者が一次対応済み。警察への連絡は未実施。営業部へ連絡予定。",
+        help: "未対応の場合も、そのまま入力してください。",
         summarize: () => true
+      },
+      {
+        key: "external_action_detail",
+        label: QUESTION_LABELS.external_action_detail,
+        type: "textarea",
+        bot: "医療機関・保健所・警察など、店舗外への対応状況を入力してください。",
+        placeholder: "例：警察へ連絡済み。保健所への相談は未実施。該当なしの場合は該当なしと入力。",
+        help: "未実施・該当なしの場合も、そのまま入力してください。",
+        summarize: () => true
+      }
+    ];
+
+    const urgentQuestions = [
+      {
+        key: "facility_homecare",
+        label: QUESTION_LABELS.facility_homecare,
+        type: "choice",
+        choices: YES_NO,
+        bot: "速報判断の確認です。施設在宅に関わる内容ですか。",
+        help: "施設在宅に関係する場合は「あり」を選んでください。"
+      },
+      {
+        key: "facility_name",
+        label: QUESTION_LABELS.facility_name,
+        type: "text",
+        condition: () => isYes(state.answers.facility_homecare),
+        bot: "施設在宅に関わる場合、施設名を入力してください。",
+        placeholder: "例：〇〇ホーム、〇〇施設",
+        help: "分かる範囲で入力してください。"
+      },
+      {
+        key: "urgent_narcotic_related",
+        label: QUESTION_LABELS.urgent_narcotic_related,
+        type: "choice",
+        choices: YES_NO,
+        bot: "麻薬または覚醒剤原料が関わる内容ですか。",
+        help: "管理薬剤の紛失だけでなく、回収・廃棄手続きなども含めて確認してください。"
+      },
+      {
+        key: "urgent_external_contact",
+        label: QUESTION_LABELS.urgent_external_contact,
+        type: "choice",
+        choices: YES_NO,
+        bot: "保健所・警察・行政など、社外への対応が発生していますか。",
+        help: "相談予定・報告予定を含める場合は「あり」を選んでください。"
+      },
+      {
+        key: "urgent_secondary_complaint",
+        label: QUESTION_LABELS.urgent_secondary_complaint,
+        type: "choice",
+        choices: YES_NO,
+        condition: () => !isPrivacy() && !isControlledLoss(),
+        bot: "2次クレームに発展している、または発展しそうな状況はありますか。",
+        help: "現時点で近いものを選んでください。"
+      },
+      {
+        key: "urgent_taken",
+        label: QUESTION_LABELS.urgent_taken,
+        type: "choice",
+        choices: YES_NO,
+        condition: () => !isDispensing(),
+        bot: "速報判断の確認です。服用が発生していますか。",
+        help: "調剤ミス以外でも服用が関係する場合は「あり」を選んでください。"
+      },
+      {
+        key: "urgent_health",
+        label: QUESTION_LABELS.urgent_health,
+        type: "choice",
+        choices: YES_NO,
+        condition: () => !isDispensing() && isYes(state.answers.urgent_taken),
+        bot: "服用がある場合、健康被害はありますか。",
+        help: "症状・受診・入院などがあれば「あり」を選んでください。"
+      },
+      {
+        key: "urgent_health_detail",
+        label: QUESTION_LABELS.urgent_health_detail,
+        type: "textarea",
+        condition: () => !isDispensing() && isYes(state.answers.urgent_health),
+        bot: "健康被害の内容を入力してください。AIが短く整理します。",
+        placeholder: "例：服用後に気分不良を訴えている。受診予定は未確認。",
+        help: "診断ではなく、確認できている事実だけで大丈夫です。",
+        summarize: () => true
+      },
+      {
+        key: "urgent_hospitalized",
+        label: QUESTION_LABELS.urgent_hospitalized,
+        type: "choice",
+        choices: YES_NO_UNKNOWN,
+        condition: () => isHealthYes(),
+        bot: "入院の有無を選んでください。",
+        help: "現時点で分からない場合は「不明」を選んでください。"
       },
       {
         key: "supplement",
-        label: "補足事項",
+        label: QUESTION_LABELS.supplement,
         type: "textarea",
         optional: true,
         bot: "最後に、他に伝えておきたいことがあれば入力してください。なければ空欄のまま進めます。",
         placeholder: "例：担当者名、折り返し希望時間、追加で気になる点など",
         help: "補足がない場合は「補足なしで進む」を押してください。"
       }
-    ].filter((q) => !q.condition || q.condition());
+    ];
+
+    let categorySpecificQuestions = [];
+    if (isDispensing()) categorySpecificQuestions = dispensingQuestions;
+    else if (isPrivacy()) categorySpecificQuestions = privacyQuestions;
+    else if (isControlledLoss()) categorySpecificQuestions = controlledLossQuestions;
+    else if (isOtherTrouble()) categorySpecificQuestions = otherTroubleQuestions;
+
+    return commonQuestions.concat(categorySpecificQuestions, urgentQuestions).filter((q) => !q.condition || q.condition());
   }
 
   function getQuestion(key) {
@@ -447,48 +844,60 @@
   function warmLeadForQuestion(key) {
     const leads = {
       category: "ご連絡ありがとうございます。まずは落ち着いて、いちばん近い内容を一緒に選びましょう。",
-      mistake_type: "それはお困りですね。ここから先は、必要なことだけ順番に確認していきます。",
-      store_code: "安心してください。店舗の確認から、ゆっくり進めます。",
+      mistake_type: "ここから先は、必要なことだけ順番に確認していきます。",
+      headquarter: "店舗の所属情報を確認します。分かる範囲で選んでください。",
+      store_code: "店舗の確認から、ゆっくり進めます。",
       store_name: "ありがとうございます。続いて店舗名を確認します。分かる範囲で大丈夫です。",
       medical_institution: "ここも分かる範囲で大丈夫です。処方元の医療機関を確認します。",
       dose_date: "日付は正確でなくても構いません。近いものを選んでください。",
-      discovery_date: "大丈夫です。発覚した日を、分かる範囲で選びましょう。",
+      discovery_date: "発覚した日を、分かる範囲で選びましょう。",
       patient_type: "患者様について、分かる範囲だけ教えてください。",
-      age_group: "個人を特定しすぎない形で確認します。安心してください。",
-      true_false_info: "ここは大切な内容ですが、文章を整える必要はありません。あとでAIが読みやすく整理します。",
+      patient_gender: "患者様情報を必要最小限で確認します。",
+      patient_age: "年齢は速報判断に使います。分からない場合は不明で大丈夫です。",
+      true_false_info: "文章を整える必要はありません。あとでAIが読みやすく整理します。",
+      input_error: "入力ミスの有無を確認します。分かる範囲で大丈夫です。",
       taken: "確認できている範囲で大丈夫です。服用の有無を選んでください。",
-      taken_count: "それは心配な状況ですね。分かっている回数や日数だけで構いません。",
-      health: "安心してください。ここでは判断ではなく、事実として分かる範囲を共有します。",
-      health_detail: "それはお困りですね。症状は、聞いている範囲だけで大丈夫です。",
-      patient_reaction: "患者様の反応も、現時点で近いものを選べば大丈夫です。",
-      privacy_type: "落ち着いて進めましょう。漏洩した可能性がある情報を選んでください。",
-      privacy_detail: "不安な状況だと思います。分かる範囲の事実をそのまま入力してください。",
-      privacy_recovery: "ありがとうございます。次に、回収できているかを確認します。",
-      controlled_type: "管理薬剤の件ですね。慎重に、でも焦らず確認していきます。",
-      controlled_name_qty: "安心してください。薬剤名や数量は、分かっている範囲だけで構いません。",
-      controlled_search: "現在の捜索状況を共有できれば大丈夫です。",
-      complaint_type: "それは対応に困る状況ですね。クレームの種類を一緒に整理しましょう。",
-      complaint_detail: "そのままの言葉で大丈夫です。あとでAIが短く読みやすく整理します。",
-      complaint_risk: "現場で感じている印象で構いません。近いものを選んでください。",
-      accident_type: "事故の内容を確認します。落ち着いて、近いものを選びましょう。",
-      injury: "けが人の有無を確認します。不明な場合は不明で大丈夫です。",
-      accident_detail: "大変な状況だと思います。分かっている事実だけ入力してください。",
-      violation_type: "AIが違反かどうかを決めることはありません。確認できている種類を選んでください。",
-      violation_detail: "断定しなくて大丈夫です。確認できている内容だけ共有しましょう。",
-      other_detail: "分類に迷う内容でも大丈夫です。相談したい内容をそのまま入力してください。",
-      discovery_route: "ありがとうございます。次に、どのように分かったかを確認します。",
-      current_action: "未対応でも問題ありません。今の状況をそのまま教えてください。",
-      action_detail: "対応途中でも大丈夫です。実施済み・予定していることを分かる範囲で入力してください。",
+      taken_count: "分かっている回数や日数だけで構いません。",
+      health: "ここでは判断ではなく、事実として分かる範囲を共有します。",
+      health_detail: "症状は、聞いている範囲だけで大丈夫です。",
+      finder: "発見者を確認します。近いものを選んでください。",
+      discovery_detail: "発覚の経緯を確認します。時系列が整っていなくても大丈夫です。",
+      patient_reaction: "患者様や関係者の反応も、現時点で近いものを選べば大丈夫です。",
+      medical_report: "医療機関への報告状況を確認します。",
+      patient_action_detail: "対応途中でも大丈夫です。事実だけ入力してください。",
+      external_action_detail: "社外対応の有無を確認します。該当なしでもそのまま入力できます。",
+      occurrence_date: "発生日を確認します。正確でない場合は不明で大丈夫です。",
+      leaked_document: "漏洩した情報を確認します。分かる範囲で入力してください。",
+      privacy_who_to_whom: "個人情報漏洩の内容を整理します。分かる範囲の事実をそのまま入力してください。",
+      recovery_action: "回収対応の状況を確認します。途中経過で大丈夫です。",
+      leak_destination_action: "漏洩先への対応状況を確認します。",
+      secondary_complaint: "2次クレームの有無を確認します。",
+      controlled_class: "管理薬剤の件ですね。慎重に、でも焦らず確認していきます。",
+      controlled_medicine_name: "医薬品名は分かる範囲で大丈夫です。",
+      controlled_lost_qty: "数量を確認します。不明な場合は不明で進められます。",
+      controlled_search_detail: "捜索状況を共有できれば大丈夫です。",
+      incident_summary: "その他トラブルとして内容を整理します。",
+      incident_detail: "確認できている事実だけ入力してください。",
+      occurrence_datetime: "発生日時を確認します。おおよそでも大丈夫です。",
+      post_incident_action: "発生後の対応を確認します。未対応でもそのまま入力できます。",
+      facility_homecare: "ここから速報判断に必要な確認です。短い選択で進めます。",
+      facility_name: "施設名を確認します。分かる範囲で大丈夫です。",
+      urgent_narcotic_related: "麻薬・覚醒剤原料の関与を確認します。",
+      urgent_external_contact: "社外対応の有無を確認します。",
+      urgent_secondary_complaint: "2次クレームの有無を確認します。",
+      urgent_taken: "速報判断として、服用の有無を確認します。",
+      urgent_health: "健康被害の有無を確認します。",
+      urgent_health_detail: "健康被害の内容を確認します。",
+      urgent_hospitalized: "入院の有無を確認します。",
       supplement: "最後です。気になることがあれば、ここに残せます。なければ空欄で進められます。"
     };
-    return leads[key] || "大丈夫です。分かる範囲で、一つずつ確認していきます。";
+    return leads[key] || "分かる範囲で、一つずつ確認していきます。";
   }
 
   function getQuestionText(q) {
     const base = typeof q.bot === "function" ? q.bot() : q.bot;
     const lead = warmLeadForQuestion(q.key);
-    return `${lead}
-${base}`;
+    return `${lead}\n${base}`;
   }
 
   function escapeHtml(value) {
@@ -496,7 +905,7 @@ ${base}`;
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
+      .replace(/\"/g, "&quot;")
       .replace(/'/g, "&#039;");
   }
 
@@ -536,39 +945,78 @@ ${base}`;
     return Boolean(flag) && value.trim().length >= 15;
   }
 
+  function captureCurrentDraft() {
+    const input = document.getElementById("answerInput");
+    if (input && state.currentKey) {
+      state.drafts[state.currentKey] = input.value;
+    }
+  }
+
   function cleanupAfterAnswer(key, newValue, oldValue) {
     if (key === "category" && oldValue !== undefined && oldValue !== newValue) {
-      const keep = new Set(["category", "store_code", "store_name"]);
+      const keep = new Set(["category", "headquarter", "store_code", "store_name"]);
       Object.keys(state.answers).forEach((k) => {
         if (!keep.has(k)) delete state.answers[k];
       });
+      Object.keys(state.drafts).forEach((k) => {
+        if (!keep.has(k)) delete state.drafts[k];
+      });
+    }
+
+    if (key === "headquarter" && oldValue !== undefined && oldValue !== newValue) {
+      // 担当情報は店番と本部区分から都度算出するため、回答値の削除は不要。
     }
 
     if (key === "mistake_type" && oldValue !== undefined && oldValue !== newValue) {
       delete state.answers.true_false_info;
+      delete state.drafts.true_false_info;
     }
 
     if (key === "taken" && newValue !== "服用した") {
       delete state.answers.taken_count;
+      delete state.drafts.taken_count;
     }
 
     if (key === "health" && newValue !== "あり（症状あり）") {
       delete state.answers.health_detail;
+      delete state.drafts.health_detail;
     }
 
-    if (key === "current_action" && newValue === "未対応") {
-      delete state.answers.action_detail;
+    if (key === "facility_homecare" && !isYes(newValue)) {
+      delete state.answers.facility_name;
+      delete state.drafts.facility_name;
+    }
+
+    if (key === "urgent_taken" && !isYes(newValue)) {
+      delete state.answers.urgent_health;
+      delete state.answers.urgent_health_detail;
+      delete state.drafts.urgent_health_detail;
+      if (!isDispensing()) delete state.answers.urgent_hospitalized;
+    }
+
+    if (key === "urgent_health" && !isYes(newValue)) {
+      delete state.answers.urgent_health_detail;
+      delete state.answers.urgent_hospitalized;
+      delete state.drafts.urgent_health_detail;
+    }
+
+    if (key === "health" && newValue !== "あり（症状あり）" && isDispensing()) {
+      delete state.answers.urgent_hospitalized;
     }
 
     const activeKeys = new Set(makeQuestions().map((q) => q.key));
     Object.keys(state.answers).forEach((k) => {
       if (!activeKeys.has(k)) delete state.answers[k];
     });
+    Object.keys(state.drafts).forEach((k) => {
+      if (!activeKeys.has(k)) delete state.drafts[k];
+    });
   }
 
   function saveAnswer(key, value) {
     const oldValue = state.answers[key];
     state.answers[key] = value;
+    delete state.drafts[key];
     cleanupAfterAnswer(key, value, oldValue);
   }
 
@@ -588,6 +1036,7 @@ ${base}`;
     state.mode = "question";
     state.currentKey = key;
     state.error = "";
+    clearVoiceState();
     addMessage("bot", getQuestionText(q), q.help || "");
     render();
   }
@@ -618,6 +1067,15 @@ ${base}`;
   }
 
   function afterSaved(key) {
+    if (key === "store_code") {
+      const info = lookupStoreInfo();
+      addMessage(
+        "bot",
+        `店番から担当情報を反映しました。\n営業部：${info.sales_department}\n地区名：${info.district}\nPSV名：${info.psv_name}`,
+        "この担当情報はモックの自動反映です。実運用では店舗マスタから取得します。"
+      );
+    }
+
     const editReturn = state.editReturn;
     state.editReturn = null;
 
@@ -646,11 +1104,13 @@ ${base}`;
     const error = validateAnswer(q, normalizedValue);
     if (error) {
       state.error = `大丈夫です。${error}`;
+      state.drafts[q.key] = normalizedValue;
       render();
       return;
     }
 
     state.error = "";
+    clearVoiceState();
     addMessage("user", normalizedValue || "補足なし");
 
     if (needsSummary(q, normalizedValue)) {
@@ -663,7 +1123,7 @@ ${base}`;
           summary
         };
         state.mode = "summary";
-        addMessage("bot", "ありがとうございます。入力していただいた内容を、読みやすいように短く整理しました。この内容で記録してよいか、一緒に確認しましょう。", "安心してください。内容の意味は変えず、言いよどみや冗長な表現だけを整えます。");
+        addMessage("bot", "ありがとうございます。入力していただいた内容を、読みやすいように短く整理しました。この内容で記録してよいか、一緒に確認しましょう。", "内容の意味は変えず、言いよどみや冗長な表現だけを整えます。");
         render();
         return;
       }
@@ -696,6 +1156,7 @@ ${base}`;
     if (action === "rewrite") {
       addMessage("user", "書き直します");
       const key = pending.key;
+      state.drafts[key] = pending.original;
       state.pendingSummary = null;
       askQuestion(key);
     }
@@ -705,20 +1166,23 @@ ${base}`;
     state.mode = "confirm";
     state.currentKey = null;
     state.error = "";
-    addMessage("bot", "ここまでありがとうございます。最後に入力内容を一緒に確認しましょう。修正したい項目があれば、その項目の「修正する」を押してください。", "安心してください。まだ確定ではありません。最後の青いボタンを押すまで送信扱いにはなりません。");
+    clearVoiceState();
+    addMessage("bot", "ここまでありがとうございます。最後に入力内容を一緒に確認しましょう。修正したい項目があれば、その項目の「修正する」を押してください。", "まだ確定ではありません。最後のボタンを押すまで送信扱いにはなりません。");
     render();
   }
 
   function beginEdit(modeOverride) {
     const answered = makeQuestions().filter((q) => hasAnswer(q.key));
     if (answered.length === 0) return;
+    captureCurrentDraft();
     state.editReturn = {
       mode: modeOverride || state.mode,
       currentKey: state.currentKey
     };
     state.mode = "editSelect";
     state.error = "";
-    addMessage("bot", "大丈夫です。修正したい項目だけ選んでください。必要なところだけ直せます。", "最初からやり直す必要はありません。ここまでの入力はできるだけ保持します。");
+    clearVoiceState();
+    addMessage("bot", "修正したい項目だけ選んでください。必要なところだけ直せます。", "最初からやり直す必要はありません。ここまでの入力はできるだけ保持します。");
     render();
   }
 
@@ -728,6 +1192,7 @@ ${base}`;
     state.currentKey = key;
     state.mode = "question";
     state.error = "";
+    clearVoiceState();
     addMessage("bot", `「${q.label}」を修正します。現在の内容は「${answerText(key)}」です。`, "新しい内容を入力または選択してください。");
     render();
   }
@@ -736,18 +1201,21 @@ ${base}`;
     const reportId = `HL-${formatDate(new Date()).replace(/\//g, "")}-${String(Math.floor(Math.random() * 9000) + 1000)}`;
     state.completedId = reportId;
     state.mode = "complete";
+    clearVoiceState();
     addMessage("user", "この内容でホットラインへ共有します");
-    addMessage("bot", "受付しました。ここまで入力していただき、ありがとうございます。プロトタイプのため外部送信はしていませんが、実運用ではSlack通知と管理表転記がここで実行されます。", "安心してください。AIは判定せず、すべて人が確認する前提です。");
+    addMessage("bot", "受付しました。プロトタイプのため外部送信はしていませんが、実運用ではSlack通知と管理表転記がここで実行されます。", "AIは判定せず、すべて人が確認する前提です。");
     render();
   }
 
   function phoneFallback() {
-    addMessage("bot", "不安な場合は、通常のホットライン電話で相談してください。この画面の入力は途中でも問題ありません。安心してください、電話に切り替えても大丈夫です。", "緊急性がある、判断に迷う、入力が難しい場合は電話を優先してください。入力を完璧に終わらせる必要はありません。");
+    addMessage("bot", "不安な場合は、通常のホットライン電話で相談してください。この画面の入力は途中でも問題ありません。電話に切り替えても大丈夫です。", "緊急性がある、判断に迷う、入力が難しい場合は電話を優先してください。入力を完璧に終わらせる必要はありません。");
     render();
   }
 
   function resetApp() {
+    stopVoiceRecognition();
     state.answers = {};
+    state.drafts = {};
     state.messages = [];
     state.currentKey = null;
     state.mode = "question";
@@ -756,17 +1224,436 @@ ${base}`;
     state.error = "";
     state.startedAt = new Date();
     state.completedId = "";
+    clearVoiceState();
 
-    addMessage("bot", "こんにちは。ご連絡ありがとうございます。急いでいる中でも、ここでは必要な内容を一つずつ一緒に確認していきます。安心してください。", "文章をきれいに書く必要はありません。選ぶだけで進められる項目を多くしています。分からないところは「不明」で進められます。");
+    addMessage("bot", "こんにちは。ご連絡ありがとうございます。急いでいる中でも、必要な内容を一つずつ一緒に確認していきます。", "文章をきれいに書く必要はありません。選ぶだけで進められる項目を多くしています。分からないところは「不明」で進められます。");
     addMessage("bot", "このAIは、重大度やミスレベルを判定しません。すべての報告はホットライン担当へ共有し、人が確認します。", "途中で不安になった場合は、いつでも電話相談に切り替えられます。無理に最後まで入力しなくても大丈夫です。");
     askNext();
+  }
+
+  function getSpeechRecognitionConstructor() {
+    return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+  }
+
+  function isSpeechSupported() {
+    return Boolean(getSpeechRecognitionConstructor());
+  }
+
+  function clearVoiceState() {
+    state.voice = {
+      listening: false,
+      targetKey: "",
+      mode: "",
+      transcript: "",
+      message: "",
+      error: ""
+    };
+  }
+
+  function stopVoiceRecognition() {
+    if (recognitionInstance) {
+      try {
+        recognitionInstance.onresult = null;
+        recognitionInstance.onerror = null;
+        recognitionInstance.onend = null;
+        recognitionInstance.stop();
+      } catch (error) {
+        // 停止済みの場合は何もしない。
+      }
+      recognitionInstance = null;
+    }
+    if (state.voice.listening) {
+      state.voice.listening = false;
+    }
+  }
+
+  function normalizeForVoice(value) {
+    return String(value || "")
+      .toLowerCase()
+      .replace(/[Ⅰ]/g, "1")
+      .replace(/[Ⅱ]/g, "2")
+      .replace(/[Ⅲ]/g, "3")
+      .replace(/[Ⅳ]/g, "4")
+      .replace(/[０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0))
+      .replace(/[\s\u3000・／\/\-ー―−＿_（）()【】\[\]「」『』。、，,.!！?？:：;；]/g, "")
+      .replace(/を選択/g, "")
+      .replace(/にします/g, "")
+      .replace(/にする/g, "")
+      .replace(/です/g, "")
+      .replace(/お願いします/g, "")
+      .trim();
+  }
+
+  function aliasesForChoice(choice, q) {
+    const aliases = [choice];
+    const noPrefix = choice.replace(/^[ⅠⅡⅢⅣ]\.\s*/, "");
+    aliases.push(noPrefix);
+
+    if (choice === CATEGORIES.DISPENSING) aliases.push("調剤", "調剤ミス", "薬の間違い", "薬剤ミス");
+    if (choice === CATEGORIES.PRIVACY) aliases.push("個人情報", "情報漏洩", "個人情報漏洩", "漏洩");
+    if (choice === CATEGORIES.CONTROLLED_LOSS) aliases.push("管理薬剤", "薬剤紛失", "紛失", "管理薬剤の紛失");
+    if (choice === CATEGORIES.OTHER) aliases.push("その他", "その他トラブル", "クレーム", "事故", "法令", "法令違反");
+
+    if (choice === "あり" || choice === "有" || choice.startsWith("あり")) aliases.push("有", "ある", "あります", "はい", "該当あり", "ありです");
+    if (choice === "なし" || choice === "無") aliases.push("無", "ない", "ありません", "いいえ", "該当なし", "なしです");
+    if (choice === "不明") aliases.push("わからない", "分からない", "不明です", "不詳");
+    if (choice === "服用した") aliases.push("服用", "服用あり", "飲んだ", "飲みました", "服用しました");
+    if (choice === "服用していない") aliases.push("服用なし", "飲んでいない", "飲んでません", "未服用");
+    if (choice === "報告済") aliases.push("報告済み", "報告しました", "報告した");
+    if (choice === "未報告") aliases.push("まだ報告していない", "報告していない", "未連絡");
+
+    if (q && q.key === "patient_gender") {
+      if (choice === "男性") aliases.push("男", "男性です");
+      if (choice === "女性") aliases.push("女", "女性です");
+    }
+
+    return aliases;
+  }
+
+  function matchVoiceChoice(q, transcript) {
+    const spoken = normalizeForVoice(transcript);
+    if (!spoken) return "";
+
+    const candidates = q.choices.map((choice) => {
+      const aliases = aliasesForChoice(choice, q).map((alias) => normalizeForVoice(alias)).filter(Boolean);
+      let score = 0;
+      aliases.forEach((alias) => {
+        if (spoken === alias) score = Math.max(score, 100 + alias.length);
+        else if (spoken.includes(alias)) score = Math.max(score, 60 + alias.length);
+        else if (alias.includes(spoken) && spoken.length >= 2) score = Math.max(score, 40 + spoken.length);
+      });
+      return { choice, score };
+    });
+
+    candidates.sort((a, b) => b.score - a.score);
+    return candidates[0] && candidates[0].score > 0 ? candidates[0].choice : "";
+  }
+
+  function appendDictationToDraft(key, transcript) {
+    const q = getQuestion(key);
+    if (!q) return;
+    const existing = state.drafts[key] !== undefined
+      ? state.drafts[key]
+      : (hasAnswer(key) && state.answers[key] !== "" ? state.answers[key] : "");
+    const separator = existing && q.type === "textarea" ? "\n" : (existing ? " " : "");
+    state.drafts[key] = `${existing}${separator}${transcript}`.trim();
+  }
+
+  function startVoice(mode) {
+    const q = getQuestion(state.currentKey);
+    if (!q) return;
+
+    captureCurrentDraft();
+
+    const Recognition = getSpeechRecognitionConstructor();
+    if (!Recognition) {
+      state.voice = {
+        listening: false,
+        targetKey: q.key,
+        mode,
+        transcript: "",
+        message: "",
+        error: "このブラウザでは音声入力を利用できません。テキスト入力またはボタン選択で進めてください。"
+      };
+      render();
+      return;
+    }
+
+    stopVoiceRecognition();
+
+    recognitionInstance = new Recognition();
+    recognitionInstance.lang = "ja-JP";
+    recognitionInstance.interimResults = true;
+    recognitionInstance.continuous = false;
+    recognitionInstance.maxAlternatives = 3;
+
+    state.voice = {
+      listening: true,
+      targetKey: q.key,
+      mode,
+      transcript: "",
+      message: mode === "choice" ? "聞き取り中です。選択肢の名前を話してください。" : "聞き取り中です。入力したい内容を話してください。",
+      error: ""
+    };
+    render();
+
+    recognitionInstance.onresult = (event) => {
+      let finalText = "";
+      let interimText = "";
+      for (let i = event.resultIndex; i < event.results.length; i += 1) {
+        const text = event.results[i][0].transcript;
+        if (event.results[i].isFinal) finalText += text;
+        else interimText += text;
+      }
+
+      state.voice.transcript = (finalText || interimText).trim();
+
+      if (finalText.trim()) {
+        applyVoiceResult(mode, q.key, finalText.trim());
+      } else {
+        render();
+      }
+    };
+
+    recognitionInstance.onerror = (event) => {
+      state.voice.listening = false;
+      state.voice.error = event.error === "not-allowed"
+        ? "マイクの利用が許可されていません。ブラウザのマイク許可を確認してください。"
+        : "音声をうまく聞き取れませんでした。もう一度試すか、通常入力で進めてください。";
+      state.voice.message = "";
+      render();
+    };
+
+    recognitionInstance.onend = () => {
+      recognitionInstance = null;
+      if (state.voice.listening) {
+        state.voice.listening = false;
+        if (!state.voice.transcript && !state.voice.error) {
+          state.voice.message = "音声入力を終了しました。聞き取れなかった場合は、もう一度押してください。";
+        }
+        render();
+      }
+    };
+
+    try {
+      recognitionInstance.start();
+    } catch (error) {
+      state.voice.listening = false;
+      state.voice.error = "音声入力を開始できませんでした。少し待ってからもう一度試してください。";
+      render();
+    }
+  }
+
+  function applyVoiceResult(mode, key, transcript) {
+    state.voice.listening = false;
+    state.voice.transcript = transcript;
+    stopVoiceRecognition();
+
+    if (key !== state.currentKey || state.mode !== "question") {
+      state.voice.error = "質問が切り替わったため、音声結果は反映しませんでした。";
+      render();
+      return;
+    }
+
+    const q = getQuestion(key);
+    if (!q) return;
+
+    if (mode === "choice") {
+      const matched = matchVoiceChoice(q, transcript);
+      if (!matched) {
+        state.voice.error = `「${transcript}」を選択肢に一致させられませんでした。選択肢の言葉を短く話してください。`;
+        state.voice.message = "";
+        render();
+        return;
+      }
+      clearVoiceState();
+      submitAnswer(matched);
+      return;
+    }
+
+    appendDictationToDraft(key, transcript);
+    state.voice.message = "音声を入力欄に反映しました。内容を確認してから次へ進んでください。";
+    state.voice.error = "";
+    render();
+  }
+
+  function computeUrgency() {
+    const reasons = [];
+    const controlledClass = state.answers.controlled_class || "";
+    const age = parsePatientAge(state.answers.patient_age);
+
+    if (isOtherTrouble()) reasons.push("その他トラブル全件");
+    if (isYes(state.answers.facility_homecare)) reasons.push("施設在宅関与あり");
+    if (isYes(state.answers.urgent_narcotic_related)) reasons.push("麻薬・覚醒剤原料の関与あり");
+    if (controlledClass === "麻薬" || controlledClass === "覚醒剤原料") reasons.push(`${controlledClass}の紛失`);
+    if (isYes(state.answers.urgent_external_contact)) reasons.push("保健所等社外対応あり");
+    if (isYes(getSecondaryComplaintValue())) reasons.push("2次クレームあり");
+    if (isTakenYes() && age !== null && age < 6) reasons.push("服用あり、かつ患者年齢が6歳未満");
+    if (isHealthYes()) reasons.push("健康被害あり");
+
+    const uniqueReasons = Array.from(new Set(reasons));
+    return {
+      isUrgent: uniqueReasons.length > 0,
+      reasons: uniqueReasons
+    };
+  }
+
+  function getMentionText() {
+    const info = lookupStoreInfo();
+    const urgency = computeUrgency();
+    const mentions = [`@PSV（${info.psv_name}）`, "@営業部長", "@統括部長"];
+    if (urgency.isUrgent) mentions.push("@リスク担当");
+    return mentions.join(" ");
+  }
+
+  function row(label, value) {
+    const text = String(value == null || value === "" ? "なし" : value);
+    return { label, value: text };
+  }
+
+  function rowIfAnswered(key, labelOverride) {
+    if (!hasAnswer(key)) return null;
+    return row(labelOverride || QUESTION_LABELS[key] || key, answerText(key));
+  }
+
+  function compactRows(rows) {
+    return rows.filter(Boolean).filter((item) => item.value !== "なし" || item.label === QUESTION_LABELS.supplement);
+  }
+
+  function buildReportSections() {
+    const info = lookupStoreInfo();
+    const urgency = computeUrgency();
+    const healthDetail = state.answers.health_detail || state.answers.urgent_health_detail || "";
+    const takenValue = state.answers.taken || state.answers.urgent_taken || "";
+    const healthValue = state.answers.health || state.answers.urgent_health || "";
+
+    const sections = [
+      {
+        title: "受付情報",
+        rows: compactRows([
+          row("受付番号", state.completedId || "未確定"),
+          row("起票日時", formatDateTime(state.startedAt)),
+          row("Slackチャンネル", "#ホットライン報告"),
+          row("メンション", getMentionText())
+        ])
+      },
+      {
+        title: "速報判断",
+        highlight: urgency.isUrgent,
+        rows: compactRows([
+          row("速報区分", urgency.isUrgent ? "速報対象" : "通常報告"),
+          row("速報理由", urgency.reasons.length ? urgency.reasons.join(" / ") : "該当なし"),
+          rowIfAnswered("facility_homecare", "施設在宅関与"),
+          rowIfAnswered("facility_name", "施設名"),
+          rowIfAnswered("urgent_narcotic_related", "麻薬・覚醒剤原料の関与"),
+          rowIfAnswered("urgent_external_contact", "保健所等社外対応"),
+          hasAnswer("secondary_complaint") ? row("2次クレーム", answerText("secondary_complaint")) : rowIfAnswered("urgent_secondary_complaint", "2次クレーム"),
+          takenValue ? row("服用の有無", takenValue) : null,
+          healthValue ? row("健康被害", healthValue) : null,
+          healthDetail ? row("健康被害の内容", healthDetail) : null,
+          rowIfAnswered("urgent_hospitalized", "入院の有無")
+        ])
+      },
+      {
+        title: "店舗情報",
+        rows: compactRows([
+          rowIfAnswered("headquarter"),
+          rowIfAnswered("store_code"),
+          rowIfAnswered("store_name"),
+          row("営業部", info.sales_department),
+          row("地区名", info.district),
+          row("PSV名", info.psv_name)
+        ])
+      },
+      {
+        title: "分類・患者情報",
+        rows: compactRows([
+          rowIfAnswered("category"),
+          rowIfAnswered("mistake_type"),
+          rowIfAnswered("medical_institution"),
+          rowIfAnswered("dose_date"),
+          rowIfAnswered("occurrence_date"),
+          rowIfAnswered("occurrence_datetime"),
+          rowIfAnswered("discovery_date"),
+          rowIfAnswered("patient_type"),
+          rowIfAnswered("patient_gender"),
+          rowIfAnswered("patient_age")
+        ])
+      },
+      {
+        title: "事案内容",
+        rows: compactRows([
+          rowIfAnswered("true_false_info"),
+          rowIfAnswered("input_error"),
+          rowIfAnswered("taken"),
+          rowIfAnswered("taken_count"),
+          rowIfAnswered("health"),
+          rowIfAnswered("health_detail"),
+          rowIfAnswered("finder"),
+          rowIfAnswered("discovery_detail"),
+          rowIfAnswered("patient_reaction"),
+          rowIfAnswered("leaked_document"),
+          rowIfAnswered("privacy_who_to_whom"),
+          rowIfAnswered("controlled_class"),
+          rowIfAnswered("controlled_medicine_name"),
+          rowIfAnswered("controlled_lost_qty"),
+          rowIfAnswered("incident_summary"),
+          rowIfAnswered("incident_detail")
+        ])
+      },
+      {
+        title: "対応状況",
+        rows: compactRows([
+          rowIfAnswered("medical_report"),
+          rowIfAnswered("patient_action_detail"),
+          rowIfAnswered("recovery_action"),
+          rowIfAnswered("leak_destination_action"),
+          rowIfAnswered("controlled_search_detail"),
+          rowIfAnswered("post_incident_action"),
+          rowIfAnswered("external_action_detail"),
+          rowIfAnswered("secondary_complaint")
+        ])
+      },
+      {
+        title: "補足",
+        rows: compactRows([
+          rowIfAnswered("supplement")
+        ])
+      }
+    ];
+
+    return sections.filter((section) => section.rows.length > 0);
+  }
+
+  function buildSlackPreviewText() {
+    const sections = buildReportSections();
+    return sections.map((section) => {
+      const body = section.rows.map((item) => `・${item.label}：${item.value}`).join("\n");
+      return `【${section.title}】\n${body}`;
+    }).join("\n\n");
+  }
+
+  function renderSlackPreviewHtml() {
+    const urgency = computeUrgency();
+    const sections = buildReportSections();
+    const bannerClass = urgency.isUrgent ? "slack-banner urgent" : "slack-banner normal";
+    const bannerText = urgency.isUrgent
+      ? `速報対象：${urgency.reasons.join(" / ")}`
+      : "通常報告：速報条件への該当なし";
+
+    const sectionHtml = sections.map((section) => {
+      const rows = section.rows.map((item) => `
+        <div class="slack-row">
+          <div class="slack-label">${escapeHtml(item.label)}</div>
+          <div class="slack-value">${escapeHtml(item.value)}</div>
+        </div>
+      `).join("");
+      const sectionClass = section.highlight ? "slack-section section-highlight" : "slack-section";
+      return `
+        <section class="${sectionClass}">
+          <h3>${escapeHtml(section.title)}</h3>
+          <div class="slack-rows">${rows}</div>
+        </section>
+      `;
+    }).join("");
+
+    return `
+      <div class="slack-preview" aria-label="Slack投稿プレビュー">
+        <div class="slack-top">
+          <span class="slack-channel">#ホットライン報告</span>
+          <span class="slack-mentions">${escapeHtml(getMentionText())}</span>
+        </div>
+        <div class="${bannerClass}">${escapeHtml(bannerText)}</div>
+        ${sectionHtml}
+      </div>
+    `;
   }
 
   function renderMessages() {
     chatLog.innerHTML = "";
     state.messages.forEach((message) => {
-      const row = document.createElement("div");
-      row.className = `message-row ${message.role}`;
+      const rowEl = document.createElement("div");
+      rowEl.className = `message-row ${message.role}`;
 
       const avatar = document.createElement("div");
       avatar.className = "avatar";
@@ -778,40 +1665,89 @@ ${base}`;
       const smallText = message.small ? escapeHtml(message.small).replace(/\n/g, "<br>") : "";
       bubble.innerHTML = `<p>${mainText}</p>${smallText ? `<p class="small">${smallText}</p>` : ""}`;
 
-      row.appendChild(avatar);
-      row.appendChild(bubble);
-      chatLog.appendChild(row);
+      rowEl.appendChild(avatar);
+      rowEl.appendChild(bubble);
+      chatLog.appendChild(rowEl);
     });
     chatLog.scrollTop = chatLog.scrollHeight;
+  }
+
+  function renderVoiceControls(q) {
+    const supported = isSpeechSupported();
+    const mode = q.type === "choice" ? "choice" : "dictation";
+    const activeForThisQuestion = state.voice.targetKey === q.key;
+    const listening = activeForThisQuestion && state.voice.listening;
+    const label = q.type === "choice" ? "音声で選択する" : "音声で入力する";
+    const title = supported ? label : "このブラウザでは音声入力を利用できません";
+
+    return `
+      <div class="voice-compact">
+        <button id="voiceStartButton" class="mic-button${listening ? " is-listening" : ""}" type="button" data-voice-mode="${escapeHtml(mode)}" aria-label="${escapeHtml(title)}" title="${escapeHtml(title)}"${supported ? "" : " disabled"} aria-pressed="${listening ? "true" : "false"}">🎙</button>
+      </div>
+    `;
+  }
+
+  function renderVoiceFeedback(q) {
+    const activeForThisQuestion = state.voice.targetKey === q.key;
+    if (!activeForThisQuestion) return "";
+
+    const message = state.voice.message || "";
+    const transcript = state.voice.transcript || "";
+    const error = state.voice.error || "";
+
+    if (!message && !transcript && !error) return "";
+
+    return `
+      <div class="voice-feedback">
+        ${message ? `<p class="voice-status">${escapeHtml(message)}</p>` : ""}
+        ${transcript ? `<p class="voice-transcript">聞き取り：${escapeHtml(transcript)}</p>` : ""}
+        ${error ? `<p class="voice-error" role="alert">${escapeHtml(error)}</p>` : ""}
+      </div>
+    `;
+  }
+
+  function renderQuestionHeading(q, voiceHtml, voiceFeedbackHtml) {
+    return `
+      <div class="question-heading-row">
+        <div class="question-heading-main">
+          <h2 class="question-title">${escapeHtml(q.label)}</h2>
+          <p class="question-help">${escapeHtml(q.help || (q.type === "choice" ? "選択してください。" : "入力してください。"))}</p>
+        </div>
+        ${voiceHtml}
+      </div>
+      ${voiceFeedbackHtml}
+    `;
   }
 
   function renderQuestionPanel() {
     const q = getQuestion(state.currentKey);
     if (!q) return "";
 
+    const draftValue = state.drafts[q.key] !== undefined ? state.drafts[q.key] : "";
     const answeredValue = hasAnswer(q.key) ? answerText(q.key) : "";
-    const valueAttr = q.type === "text" ? ` value="${escapeHtml(answeredValue === "なし" ? "" : answeredValue)}"` : "";
+    const initialTextValue = draftValue || (answeredValue === "なし" ? "" : answeredValue);
+    const valueAttr = q.type === "text" ? ` value="${escapeHtml(initialTextValue)}"` : "";
     const errorHtml = state.error ? `<div class="error-box" role="alert">${escapeHtml(state.error)}</div>` : "";
+    const voiceHtml = renderVoiceControls(q);
+    const voiceFeedbackHtml = renderVoiceFeedback(q);
+    const headingHtml = renderQuestionHeading(q, voiceHtml, voiceFeedbackHtml);
 
     if (q.type === "choice") {
       const buttons = q.choices.map((choice) => {
         return `<button class="choice-button" type="button" data-choice="${escapeHtml(choice)}">${escapeHtml(choice)}</button>`;
       }).join("");
       return `
-        <h2 class="question-title">${escapeHtml(q.label)}</h2>
-        <p class="question-help">${escapeHtml(q.help || "選択してください。")}</p>
+        ${headingHtml}
         <div class="choice-grid">${buttons}</div>
         ${errorHtml}
       `;
     }
 
     if (q.type === "textarea") {
-      const initial = hasAnswer(q.key) && state.answers[q.key] !== "" ? escapeHtml(state.answers[q.key]) : "";
       return `
-        <h2 class="question-title">${escapeHtml(q.label)}</h2>
-        <p class="question-help">${escapeHtml(q.help || "入力してください。")}</p>
+        ${headingHtml}
         <div class="input-stack">
-          <textarea id="answerInput" class="textarea-input" placeholder="${escapeHtml(q.placeholder || "入力してください")}">${initial}</textarea>
+          <textarea id="answerInput" class="textarea-input" placeholder="${escapeHtml(q.placeholder || "入力してください")}">${escapeHtml(initialTextValue)}</textarea>
           <div class="input-example">${escapeHtml(q.placeholder || "")}</div>
           <button id="submitTextButton" class="primary-button" type="button">入力した内容で次へ進む</button>
           ${q.optional ? `<button id="skipOptionalButton" class="secondary-button" type="button">補足なしで進む</button>` : ""}
@@ -821,8 +1757,7 @@ ${base}`;
     }
 
     return `
-      <h2 class="question-title">${escapeHtml(q.label)}</h2>
-      <p class="question-help">${escapeHtml(q.help || "入力してください。")}</p>
+      ${headingHtml}
       <div class="input-stack">
         <input id="answerInput" class="text-input" type="text" inputmode="${escapeHtml(q.inputMode || "text")}" maxlength="${escapeHtml(q.maxLength || 200)}" placeholder="${escapeHtml(q.placeholder || "入力してください")}"${valueAttr} />
         <div class="input-example">${escapeHtml(q.placeholder || "")}</div>
@@ -859,10 +1794,20 @@ ${base}`;
       `;
     }).join("");
 
+    const info = lookupStoreInfo();
+
     return `
       <h2 class="question-title">送信前の確認</h2>
       <p class="question-help">内容を確認してください。修正は項目ごとにできます。</p>
+      <div class="auto-info-box">
+        <p><strong>店番連動の担当情報</strong></p>
+        <p>営業部：${escapeHtml(info.sales_department)} ／ 地区名：${escapeHtml(info.district)} ／ PSV名：${escapeHtml(info.psv_name)}</p>
+      </div>
       <div class="confirm-list">${rows}</div>
+      <div class="preview-wrapper">
+        <p class="summary-title">Slack投稿プレビュー</p>
+        ${renderSlackPreviewHtml()}
+      </div>
       <div class="confirm-actions">
         <button id="finalSubmitButton" class="primary-button" type="button">この内容でホットラインへ共有する</button>
         <button id="confirmEditButton" class="secondary-button" type="button">修正する項目を選ぶ</button>
@@ -883,7 +1828,6 @@ ${base}`;
   }
 
   function renderCompletePanel() {
-    const slackPreview = buildSlackPreview();
     return `
       <h2 class="question-title">受付完了</h2>
       <div class="complete-box">
@@ -892,17 +1836,16 @@ ${base}`;
         <p>管理表転記：モック完了</p>
         <p>次に、PSVまたは営業部長からの電話連絡をお待ちください。対応が完了したらPSVへ完了連絡をお願いします。</p>
       </div>
-      <div class="summary-box" style="margin-top: 12px;">
+      <div class="preview-wrapper complete-preview">
         <p class="summary-title">Slack投稿プレビュー</p>
-        <p class="summary-text">${escapeHtml(slackPreview)}</p>
+        ${renderSlackPreviewHtml()}
+        <details class="slack-plain-details">
+          <summary>Slackテキスト形式で確認する</summary>
+          <pre>${escapeHtml(buildSlackPreviewText())}</pre>
+        </details>
       </div>
-      <button id="restartButton" class="secondary-button" type="button" style="margin-top: 12px;">新しい報告を開始する</button>
+      <button id="restartButton" class="secondary-button restart-button" type="button">新しい報告を開始する</button>
     `;
-  }
-
-  function buildSlackPreview() {
-    const rows = makeQuestions().filter((q) => hasAnswer(q.key)).map((q) => `${q.label}: ${answerText(q.key)}`);
-    return `#ホットライン報告\n${rows.join("\n")}\n@PSV @営業部長 @統括部長`;
   }
 
   function progressLabel() {
@@ -938,6 +1881,9 @@ ${base}`;
     const submitTextButton = document.getElementById("submitTextButton");
     const answerInput = document.getElementById("answerInput");
     if (submitTextButton && answerInput) {
+      answerInput.addEventListener("input", () => {
+        if (state.currentKey) state.drafts[state.currentKey] = answerInput.value;
+      });
       submitTextButton.addEventListener("click", () => submitAnswer(answerInput.value));
       answerInput.addEventListener("keydown", (event) => {
         if (event.key === "Enter" && !event.shiftKey && answerInput.tagName !== "TEXTAREA") {
@@ -945,12 +1891,30 @@ ${base}`;
           submitAnswer(answerInput.value);
         }
       });
-      setTimeout(() => answerInput.focus(), 0);
+      if (window.matchMedia("(min-width: 721px)").matches) {
+        setTimeout(() => answerInput.focus(), 0);
+      }
     }
 
     const skipOptionalButton = document.getElementById("skipOptionalButton");
     if (skipOptionalButton) {
       skipOptionalButton.addEventListener("click", () => submitAnswer(""));
+    }
+
+    const voiceStartButton = document.getElementById("voiceStartButton");
+    if (voiceStartButton) {
+      voiceStartButton.addEventListener("click", () => {
+        const q = getQuestion(state.currentKey);
+        const listeningForCurrentQuestion = q && state.voice.listening && state.voice.targetKey === q.key;
+        if (listeningForCurrentQuestion) {
+          stopVoiceRecognition();
+          state.voice.listening = false;
+          state.voice.message = "音声入力を停止しました。";
+          render();
+          return;
+        }
+        startVoice(voiceStartButton.getAttribute("data-voice-mode"));
+      });
     }
 
     questionArea.querySelectorAll("[data-summary-action]").forEach((button) => {
@@ -992,5 +1956,6 @@ ${base}`;
     fontButton.textContent = document.body.classList.contains("large-text") ? "標準の文字に戻す" : "文字を大きく";
   });
 
+  bindViewportGuards();
   resetApp();
 })();
