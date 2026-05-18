@@ -371,10 +371,10 @@ select:focus-visible {
   margin: 0;
 }
 
-/* フッター 4ボタン横並び */
-.footer-four-col {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px;
+/* フッター 3ボタン横並び */
+.footer-three-col {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
 }
 
 /* ファイル選択ボタン（labelをボタン風に） */
@@ -935,10 +935,10 @@ code {
   }
 
   .mic-button {
-    width: 42px;
-    height: 42px;
-    min-width: 42px;
-    min-height: 42px;
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    min-height: 48px;
   }
 
   .avatar {
@@ -955,34 +955,50 @@ code {
   display: flex;
   align-items: flex-start;
   justify-content: flex-end;
-  min-width: 48px;
+  min-width: 56px;
 }
 
+/* ── マイクボタン（目立つデザイン）── */
 .mic-button {
-  width: 46px;
-  height: 46px;
-  min-width: 46px;
-  min-height: 46px;
+  width: 54px;
+  height: 54px;
+  min-width: 54px;
+  min-height: 54px;
   border-radius: 999px;
-  border: 2px solid var(--bot-border);
-  background: #fff;
+  border: 2.5px solid var(--header-green);
+  background: var(--bot-soft);
   color: var(--header-green-dark);
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 14px rgba(21, 128, 61, 0.22);
   display: grid;
   place-items: center;
-  font-size: 1.15rem;
+  font-size: 1.45rem;
   line-height: 1;
   padding: 0;
+  transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+}
+
+.mic-button:hover:not(:disabled) {
+  background: var(--header-green);
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(21, 128, 61, 0.30);
+  transform: scale(1.06);
 }
 
 .mic-button.is-listening {
   border-color: var(--header-green);
-  background: var(--bot-soft);
-  box-shadow: 0 0 0 4px rgba(21, 128, 61, 0.16);
+  background: var(--header-green);
+  color: #fff;
+  box-shadow: 0 0 0 5px rgba(21, 128, 61, 0.22), 0 4px 14px rgba(21, 128, 61, 0.30);
+  animation: mic-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes mic-pulse {
+  0%, 100% { box-shadow: 0 0 0 5px rgba(21, 128, 61, 0.22), 0 4px 14px rgba(21, 128, 61, 0.30); }
+  50%       { box-shadow: 0 0 0 9px rgba(21, 128, 61, 0.10), 0 4px 14px rgba(21, 128, 61, 0.20); }
 }
 
 .mic-button:disabled {
-  opacity: 0.45;
+  opacity: 0.40;
   cursor: not-allowed;
 }
 
@@ -1183,10 +1199,10 @@ code {
 
 @media (max-width: 460px) {
   .mic-button {
-    width: 42px;
-    height: 42px;
-    min-width: 42px;
-    min-height: 42px;
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    min-height: 48px;
   }
 }
 
@@ -1364,46 +1380,76 @@ code {
 
 /* ── カレンダー日付選択 ── */
 .date-picker-section {
-  margin-bottom: 12px;
-  padding: 12px 14px;
+  margin-bottom: 14px;
+  padding: 14px 16px;
   background: var(--primary-soft);
-  border: 2px solid var(--primary);
-  border-radius: 18px;
-  display: grid;
+  border: 2.5px solid var(--primary);
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
   gap: 10px;
 }
 
 .date-picker-label {
-  font-size: 0.88rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.92rem;
   font-weight: 900;
   color: var(--primary-dark);
-  display: block;
 }
 
-.date-picker-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
+.date-picker-emoji {
+  font-size: 1.2rem;
+  line-height: 1;
 }
 
 .date-picker-input {
-  flex: 1 1 auto;
+  width: 100%;
   border: 2px solid var(--primary);
   border-radius: 14px;
-  padding: 10px 14px;
+  padding: 12px 14px;
   background: #fff;
   color: var(--text);
   font-weight: 700;
   font-size: max(16px, 1rem);
-  min-width: 0;
+}
+
+/* 選択日プレビュー */
+.date-preview-text {
+  padding: 8px 14px;
+  border-radius: 12px;
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.65);
+  border: 1.5px dashed var(--border);
+  text-align: center;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.date-preview-text.has-date {
+  color: var(--primary-dark);
+  background: #fff;
+  border: 1.5px solid var(--primary);
+  border-style: solid;
+  font-size: 1rem;
 }
 
 .date-picker-button {
-  min-height: 48px;
-  padding: 10px 18px;
-  flex-shrink: 0;
-  white-space: nowrap;
-  border-radius: 14px;
+  width: 100%;
+  min-height: 54px;
+  border-radius: 16px;
+}
+
+.date-picker-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: 0 3px 0 var(--primary-dark) !important;
 }
 
 .date-divider-text {
@@ -1411,7 +1457,6 @@ code {
   color: var(--muted);
   font-size: 0.80rem;
   font-weight: 700;
-  text-align: center;
   display: flex;
   align-items: center;
   gap: 8px;
