@@ -124,6 +124,17 @@
   /* ── ログ管理 ── */
   const LOG_STORAGE_KEY = "hl_report_logs";
 
+  /*
+   * バックグラウンドログ送信の設定。
+   * 実運用時は LOG_SEND_CONFIG を書き換えてください。
+   *   method: "webhook" → LOG_SEND_CONFIG.endpoint に POST（Formspree / 自社APIなど）
+   *   method: "none"    → localStorage 保存のみ（デフォルト・このプロトタイプ）
+   */
+  const LOG_SEND_CONFIG = {
+    method: "none",    // "webhook" | "none"
+    endpoint: ""       // 例: "https://formspree.io/f/XXXXXXXX"
+  };
+
   function loadLogs() {
     try { return JSON.parse(localStorage.getItem(LOG_STORAGE_KEY) || "[]"); } catch { return []; }
   }
@@ -154,6 +165,19 @@
     URL.revokeObjectURL(url);
   }
 
+  async function sendLogBackground(entry) {
+    if (LOG_SEND_CONFIG.method === "webhook" && LOG_SEND_CONFIG.endpoint) {
+      try {
+        await fetch(LOG_SEND_CONFIG.endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(entry)
+        });
+      } catch { /* ネットワークエラー時はサイレント失敗 */ }
+    }
+    /* method === "none" の場合は localStorage 保存のみ */
+  }
+
   const state = {
     answers: {},
     drafts: {},
@@ -182,7 +206,6 @@
   const editButton = document.getElementById("editButton");
   const phoneButton = document.getElementById("phoneButton");
   const resetButton = document.getElementById("resetButton");
-  const downloadLogButton = document.getElementById("downloadLogButton");
 
   let recognitionInstance = null;
 
@@ -1260,13 +1283,15 @@
     addMessage("user", "この内容でホットラインへ共有します");
     addMessage("bot", "受付しました。プロトタイプのため外部送信はしていませんが、実運用ではSlack通知と管理表転記がここで実行されます。", "AIは判定せず、すべて人が確認する前提です。");
 
-    saveLog({
+    const logEntry = {
       id: reportId,
       timestamp: formatDateTime(new Date()),
       startedAt: formatDateTime(state.startedAt),
       answers: Object.assign({}, state.answers),
       attachedFiles: state.attachedFiles.slice()
-    });
+    };
+    saveLog(logEntry);
+    sendLogBackground(logEntry); // バックグラウンド送信（LOG_SEND_CONFIG に従う）
 
     render();
   }
@@ -1748,7 +1773,7 @@
 
     return `
       <div class="voice-compact">
-        <button id="voiceStartButton" class="mic-button${listening ? " is-listening" : ""}" type="button" data-voice-mode="${escapeHtml(mode)}" aria-label="${escapeHtml(title)}" title="${escapeHtml(title)}"${supported ? "" : " disabled"} aria-pressed="${listening ? "true" : "false"}">🎙</button>
+        <button id="voiceStartButton" class="mic-button${listening ? " is-listening" : ""}" type="button" data-voice-mode="${escapeHtml(mode)}" aria-label="${escapeHtml(title)}" title="${escapeHtml(title)}"${supported ? "" : " disabled"} aria-pressed="${listening ? "true" : "false"}">🎙️</button>
       </div>
     `;
   }
@@ -1809,11 +1834,17 @@
       return `
         ${headingHtml}
         <div class="date-picker-section">
-          <span class="date-picker-label">カレンダーから選択</span>
-          <div class="date-picker-row">
-            <input type="date" id="datePickerInput" class="date-picker-input" max="${todayStr}" />
-            <button id="datePickerSubmit" class="secondary-button date-picker-button" type="button">決定</button>
+          <label class="date-picker-label" for="datePickerInput">
+            <span class="date-picker-emoji">📅</span>
+            カレンダーから日付を選択
+          </label>
+          <input type="date" id="datePickerInput" class="date-picker-input" max="${todayStr}" aria-label="日付を選択してください" />
+          <div class="date-preview-text" id="datePreviewText" aria-live="polite">
+            日付を選んでください
           </div>
+          <button id="datePickerSubmit" class="primary-button date-picker-button" type="button" disabled>
+            この日付で決定する ›
+          </button>
         </div>
         <p class="date-divider-text">または下の一覧から選択</p>
         <div class="choice-grid">${buttons}</div>
@@ -1975,12 +2006,35 @@
       button.addEventListener("click", () => submitAnswer(button.getAttribute("data-choice")));
     });
 
+    /* カレンダー日付選択：ライブプレビュー + 決定ボタン */
+    const datePickerInput = document.getElementById("datePickerInput");
+    const datePreviewText = document.getElementById("datePreviewText");
     const datePickerSubmit = document.getElementById("datePickerSubmit");
+
+    if (datePickerInput) {
+      datePickerInput.addEventListener("change", () => {
+        if (datePickerInput.value) {
+          const [y, m, d] = datePickerInput.value.split("-");
+          const formatted = `${y}/${m}/${d}`;
+          if (datePreviewText) {
+            datePreviewText.textContent = `✅ 選択中：${formatted}`;
+            datePreviewText.classList.add("has-date");
+          }
+          if (datePickerSubmit) datePickerSubmit.disabled = false;
+        } else {
+          if (datePreviewText) {
+            datePreviewText.textContent = "日付を選んでください";
+            datePreviewText.classList.remove("has-date");
+          }
+          if (datePickerSubmit) datePickerSubmit.disabled = true;
+        }
+      });
+    }
+
     if (datePickerSubmit) {
       datePickerSubmit.addEventListener("click", () => {
-        const dateInput = document.getElementById("datePickerInput");
-        if (dateInput && dateInput.value) {
-          const [year, month, day] = dateInput.value.split("-");
+        if (datePickerInput && datePickerInput.value) {
+          const [year, month, day] = datePickerInput.value.split("-");
           submitAnswer(`${year}/${month}/${day}`);
         } else {
           state.error = "日付を選択してください。";
@@ -2140,6 +2194,7 @@
       chatWindow.style.gridTemplateRows = `${clamped}px ${HANDLE_H}px ${total - clamped}px`;
     }
 
+    /* ── タッチ操作（スマホ）── */
     handle.addEventListener("touchstart", (e) => {
       if (!isMobile()) return;
       dragging = true;
@@ -2156,6 +2211,23 @@
     handle.addEventListener("touchend", () => { dragging = false; });
     handle.addEventListener("touchcancel", () => { dragging = false; });
 
+    /* ── マウス操作（PC・デスクトップブラウザ）── */
+    handle.addEventListener("mousedown", (e) => {
+      if (!isMobile()) return;
+      dragging = true;
+      startY = e.clientY;
+      startTopPx = getCurrentTopPx();
+      e.preventDefault(); // テキスト選択防止
+    });
+
+    document.addEventListener("mousemove", (e) => {
+      if (!dragging) return;
+      applyRows(startTopPx + (e.clientY - startY));
+    });
+
+    document.addEventListener("mouseup", () => { dragging = false; });
+
+    /* ── キーボード操作 ── */
     handle.addEventListener("keydown", (e) => {
       if (!isMobile()) return;
       const step = 24;
@@ -2163,6 +2235,7 @@
       if (e.key === "ArrowDown") { e.preventDefault(); applyRows(getCurrentTopPx() + step); }
     });
 
+    /* ウィンドウリサイズ時はインラインスタイルをリセット */
     window.addEventListener("resize", () => {
       if (!isMobile()) chatWindow.style.gridTemplateRows = "";
     });
