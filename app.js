@@ -1834,13 +1834,12 @@
       return `
         ${headingHtml}
         <div class="date-picker-section">
-          <label class="date-picker-label" for="datePickerInput">
-            <span class="date-picker-emoji">📅</span>
-            カレンダーから日付を選択
-          </label>
-          <input type="date" id="datePickerInput" class="date-picker-input" max="${todayStr}" aria-label="日付を選択してください" />
-          <div class="date-preview-text" id="datePreviewText" aria-live="polite">
-            日付を選んでください
+          <div class="date-picker-row">
+            <div class="date-picker-icon-wrapper" title="タップして日付を選択">
+              <span class="date-picker-icon-emoji" aria-hidden="true">📅</span>
+              <input type="date" id="datePickerInput" class="date-picker-input-overlay" max="${todayStr}" aria-label="カレンダーから日付を選択" />
+            </div>
+            <div class="date-preview-text" id="datePreviewText" aria-live="polite">日付を選んでください</div>
           </div>
           <button id="datePickerSubmit" class="primary-button date-picker-button" type="button" disabled>
             この日付で決定する ›
@@ -2247,7 +2246,6 @@
     const ok = window.confirm("入力中の内容を消して、最初からやり直しますか？");
     if (ok) resetApp();
   });
-  if (downloadLogButton) downloadLogButton.addEventListener("click", downloadLogs);
 
   applyFontSize(fontSizeIndex);
   initResizeHandle();

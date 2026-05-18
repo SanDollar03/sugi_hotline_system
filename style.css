@@ -671,11 +671,13 @@ select:focus-visible {
   min-height: 54px;
   border: 2px solid var(--border);
   border-radius: 16px;
-  padding: 10px 14px;
+  padding: 8px 6px;
   background: #fff;
   color: var(--text);
-  font-size: 0.86rem;
+  font-size: 0.78rem;
   font-weight: 900;
+  line-height: 1.3;
+  word-break: break-all;
 }
 
 .assist-button:disabled {
@@ -852,7 +854,7 @@ code {
     grid-template-columns: 1fr;
   }
 
-  .app-footer .assist-actions {
+  .app-footer .assist-actions:not(.footer-three-col) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -929,9 +931,9 @@ code {
 
   .assist-button {
     min-height: 46px;
-    padding: 8px 10px;
+    padding: 6px 4px;
     border-radius: 14px;
-    font-size: 0.78rem;
+    font-size: 0.70rem;
   }
 
   .mic-button {
@@ -1390,33 +1392,52 @@ code {
   gap: 10px;
 }
 
-.date-picker-label {
+/* 横並び行: [📅アイコン] [選択日表示テキスト] */
+.date-picker-row {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.92rem;
-  font-weight: 900;
-  color: var(--primary-dark);
+  gap: 10px;
 }
 
-.date-picker-emoji {
-  font-size: 1.2rem;
-  line-height: 1;
-}
-
-.date-picker-input {
-  width: 100%;
-  border: 2px solid var(--primary);
+/* 📅アイコンラッパー（透明inputをアイコン上に重ねてタップで開く） */
+.date-picker-icon-wrapper {
+  position: relative;
+  width: 54px;
+  height: 54px;
+  flex-shrink: 0;
+  border: 2.5px solid var(--primary);
   border-radius: 14px;
-  padding: 12px 14px;
   background: #fff;
-  color: var(--text);
-  font-weight: 700;
-  font-size: max(16px, 1rem);
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(21, 89, 199, 0.14);
 }
 
-/* 選択日プレビュー */
+.date-picker-icon-emoji {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.7rem;
+  pointer-events: none;
+}
+
+/* 透明なdate input（アイコンに重ねてタップでネイティブピッカーを開く） */
+.date-picker-input-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  padding: 0;
+  border: none;
+  font-size: 16px;
+}
+
+/* 選択日プレビュー（アイコンの横に横並び表示） */
 .date-preview-text {
+  flex: 1;
   padding: 8px 14px;
   border-radius: 12px;
   font-size: 0.88rem;
@@ -1425,7 +1446,7 @@ code {
   background: rgba(255, 255, 255, 0.65);
   border: 1.5px dashed var(--border);
   text-align: center;
-  min-height: 36px;
+  min-height: 54px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1435,7 +1456,6 @@ code {
   color: var(--primary-dark);
   background: #fff;
   border: 1.5px solid var(--primary);
-  border-style: solid;
   font-size: 1rem;
 }
 
