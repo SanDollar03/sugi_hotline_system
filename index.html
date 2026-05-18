@@ -24,7 +24,7 @@
         </div>
       </div>
       <div class="header-actions">
-        <button id="fontButton" class="header-button" type="button">文字を大きく</button>
+        <button id="fontButton" class="header-button" type="button" aria-label="文字サイズを変更">文字：標準</button>
         <button id="resetButton" class="header-button danger" type="button">最初から</button>
       </div>
     </header>
@@ -35,7 +35,20 @@
           <div id="chatLog" class="chat-log" aria-live="polite" aria-label="会話履歴" role="log"></div>
         </section>
 
+        <div class="resize-handle" id="resizeHandle" role="separator" aria-orientation="horizontal" aria-label="上下サイズ調整ハンドル（ドラッグで調整）" tabindex="0">
+          <div class="resize-handle-bar"></div>
+        </div>
+
         <section class="answer-panel" aria-label="回答操作エリア">
+          <div class="file-attach-zone" id="fileAttachZone">
+            <label class="file-attach-label" for="fileInput">
+              <span class="file-attach-icon">📎</span>
+              <span class="file-attach-text">ファイル・写真を添付（任意）</span>
+            </label>
+            <input type="file" id="fileInput" class="file-input-hidden" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt" aria-label="ファイルまたは写真を選択" />
+            <div id="attachedFilesList" class="attached-files-list" aria-live="polite" aria-label="添付済みファイル"></div>
+          </div>
+
           <div class="panel-topline">
             <span class="panel-label">次に操作する場所</span>
             <span id="progressText" class="progress-text">準備中</span>
@@ -46,9 +59,10 @@
     </main>
 
     <footer class="app-footer" aria-label="補助操作">
-      <div class="assist-actions">
+      <div class="assist-actions footer-three-col">
         <button id="editButton" class="assist-button" type="button">回答を修正</button>
         <button id="phoneButton" class="assist-button" type="button">電話で相談</button>
+        <button id="downloadLogButton" class="assist-button" type="button" aria-label="ログをJSONでダウンロード">ログ保存</button>
       </div>
     </footer>
   </div>

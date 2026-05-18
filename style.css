@@ -52,6 +52,13 @@ body {
   overflow-x: hidden;
 }
 
+/* ── 文字サイズ 5段階 ── */
+body.font-xsmall { --font-base: 14px; }
+body.font-small   { --font-base: 16px; }
+/* font-medium = デフォルト (--font-base: 20px / モバイル18px) */
+body.font-large   { --font-base: 23px; }
+body.font-xlarge  { --font-base: 27px; }
+
 body.large-text {
   --font-base: 23px;
 }
@@ -113,7 +120,7 @@ select:focus-visible {
   margin: 0 auto;
   background: var(--surface-soft);
   display: grid;
-  grid-template-rows: minmax(0, 56fr) minmax(0, 44fr);
+  grid-template-rows: minmax(0, 56fr) 20px minmax(0, 44fr);
   overflow: hidden;
   overflow-x: hidden;
   box-shadow: var(--shadow);
@@ -681,9 +688,11 @@ code {
     --font-base: 18px;
   }
 
-  body.large-text {
-    --font-base: 20px;
-  }
+  body.large-text  { --font-base: 20px; }
+  body.font-xsmall { --font-base: 13px; }
+  body.font-small  { --font-base: 15px; }
+  body.font-large  { --font-base: 20px; }
+  body.font-xlarge { --font-base: 23px; }
 
   .chat-header {
     align-items: center;
@@ -725,7 +734,7 @@ code {
   }
 
   .chat-window {
-    grid-template-rows: minmax(0, 52fr) minmax(0, 48fr);
+    grid-template-rows: minmax(0, 52fr) 20px minmax(0, 48fr);
   }
 
   .choice-grid {
@@ -1119,6 +1128,10 @@ code {
     border-radius: 24px;
   }
 
+  .resize-handle {
+    display: none;
+  }
+
   .bot-area {
     background: var(--surface-soft);
     border: 2px solid var(--bot-border);
@@ -1182,5 +1195,232 @@ code {
 @media (min-width: 1200px) {
   .chat-window {
     grid-template-columns: minmax(0, 1.15fr) minmax(420px, 0.85fr);
+  }
+}
+
+/* ── リサイズハンドル（モバイル上下比率調整）── */
+.resize-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--border);
+  cursor: row-resize;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.resize-handle-bar {
+  width: 48px;
+  height: 5px;
+  border-radius: 999px;
+  background: #aab0bb;
+}
+
+.resize-handle:hover .resize-handle-bar,
+.resize-handle:focus .resize-handle-bar {
+  background: var(--primary);
+}
+
+/* ── ファイル添付ゾーン ── */
+.file-attach-zone {
+  padding: 8px 12px 10px;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+}
+
+.file-attach-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 2px solid var(--primary);
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+  font-size: 0.86rem;
+  font-weight: 900;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.file-attach-label:hover {
+  background: var(--primary);
+  color: #fff;
+}
+
+.file-attach-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.file-attach-text {
+  font-size: 0.84rem;
+}
+
+.file-input-hidden {
+  display: none;
+}
+
+.attached-files-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 1 1 auto;
+}
+
+.attached-file-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--success-soft);
+  border: 1.5px solid #9bd6b2;
+  color: var(--success);
+  font-size: 0.78rem;
+  font-weight: 800;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attached-file-remove {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--success);
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.attached-file-remove:hover {
+  color: var(--danger);
+}
+
+/* ── カレンダー日付選択 ── */
+.date-picker-section {
+  margin-bottom: 14px;
+  display: grid;
+  gap: 8px;
+}
+
+.date-picker-label {
+  font-size: 0.88rem;
+  font-weight: 900;
+  color: var(--primary-dark);
+}
+
+.date-picker-row {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.date-picker-input {
+  flex: 1 1 auto;
+  border: 3px solid var(--primary);
+  border-radius: 18px;
+  padding: 12px 16px;
+  background: #fff;
+  color: var(--text);
+  font-weight: 700;
+  font-size: max(16px, 1rem);
+  min-width: 0;
+}
+
+.date-picker-button {
+  min-height: 0;
+  padding: 10px 18px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.date-divider-text {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-align: center;
+  position: relative;
+}
+
+.date-divider-text::before,
+.date-divider-text::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: calc(50% - 60px);
+  height: 1px;
+  background: var(--border);
+}
+
+.date-divider-text::before { left: 0; }
+.date-divider-text::after  { right: 0; }
+
+/* ── フッター 3カラム ── */
+.footer-three-col {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* ── ログダウンロードボタン ── */
+.log-download-button {
+  margin-top: 10px;
+  min-height: 54px;
+  border: 2px solid var(--success);
+  border-radius: 16px;
+  padding: 10px 14px;
+  background: var(--success-soft);
+  color: var(--success);
+  font-size: 0.86rem;
+  font-weight: 900;
+  width: 100%;
+}
+
+.log-download-button:hover {
+  background: var(--success);
+  color: #fff;
+}
+
+.log-count-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.74rem;
+  font-weight: 900;
+  margin-left: 6px;
+}
+
+@media (max-width: 460px) {
+  .file-attach-zone {
+    padding: 6px 10px 8px;
+  }
+
+  .file-attach-label {
+    padding: 5px 10px;
+    font-size: 0.78rem;
+  }
+
+  .footer-three-col {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .footer-three-col .assist-button {
+    font-size: 0.72rem;
+    padding: 6px 4px;
   }
 }

@@ -105,6 +105,55 @@
     }
   };
 
+  /* ── 文字サイズ 5段階 ── */
+  const FONT_SIZES = [
+    { cls: "font-xsmall", label: "最小" },
+    { cls: "font-small",  label: "小" },
+    { cls: "font-medium", label: "標準" },
+    { cls: "font-large",  label: "大" },
+    { cls: "font-xlarge", label: "最大" }
+  ];
+  const FONT_DEFAULT_INDEX = 2;
+  let fontSizeIndex = (() => {
+    try {
+      const saved = parseInt(localStorage.getItem("hl_font_size_index"), 10);
+      return Number.isFinite(saved) && saved >= 0 && saved < FONT_SIZES.length ? saved : FONT_DEFAULT_INDEX;
+    } catch { return FONT_DEFAULT_INDEX; }
+  })();
+
+  /* ── ログ管理 ── */
+  const LOG_STORAGE_KEY = "hl_report_logs";
+
+  function loadLogs() {
+    try { return JSON.parse(localStorage.getItem(LOG_STORAGE_KEY) || "[]"); } catch { return []; }
+  }
+
+  function saveLog(entry) {
+    try {
+      const logs = loadLogs();
+      logs.push(entry);
+      localStorage.setItem(LOG_STORAGE_KEY, JSON.stringify(logs));
+    } catch { /* localStorage quota exceeded */ }
+  }
+
+  function downloadLogs() {
+    const logs = loadLogs();
+    if (logs.length === 0) {
+      alert("保存済みのログがありません。");
+      return;
+    }
+    const json = JSON.stringify(logs, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `hotline_logs_${formatDate(new Date()).replace(/\//g, "")}.json`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+  }
+
   const state = {
     answers: {},
     drafts: {},
@@ -116,6 +165,7 @@
     error: "",
     startedAt: new Date(),
     completedId: "",
+    attachedFiles: [],
     voice: {
       listening: false,
       targetKey: "",
@@ -133,6 +183,7 @@
   const phoneButton = document.getElementById("phoneButton");
   const fontButton = document.getElementById("fontButton");
   const resetButton = document.getElementById("resetButton");
+  const downloadLogButton = document.getElementById("downloadLogButton");
 
   let recognitionInstance = null;
 
@@ -363,17 +414,19 @@
         key: "dose_date",
         label: QUESTION_LABELS.dose_date,
         type: "choice",
+        isDateQuestion: true,
         choices: dateOptions,
         bot: "投薬日を選んでください。正確でなくても、分かる範囲で大丈夫です。",
-        help: "一覧にない場合は「それ以前」または「不明」を選べます。"
+        help: "カレンダーで選ぶか、下の一覧から選んでください。「それ以前」「不明」も選べます。"
       },
       {
         key: "discovery_date",
         label: QUESTION_LABELS.discovery_date,
         type: "choice",
+        isDateQuestion: true,
         choices: dateOptions,
         bot: "発覚日を選んでください。",
-        help: "報告時点で分かる範囲で選んでください。"
+        help: "カレンダーで選ぶか、下の一覧から選んでください。"
       },
       {
         key: "patient_type",
@@ -519,17 +572,19 @@
         key: "occurrence_date",
         label: QUESTION_LABELS.occurrence_date,
         type: "choice",
+        isDateQuestion: true,
         choices: dateOptions,
         bot: "個人情報漏洩が発生した日を選んでください。",
-        help: "正確でない場合は「不明」または「それ以前」で進めてください。"
+        help: "カレンダーで選ぶか、下の一覧から選んでください。"
       },
       {
         key: "discovery_date",
         label: QUESTION_LABELS.discovery_date,
         type: "choice",
+        isDateQuestion: true,
         choices: dateOptions,
         bot: "発覚日を選んでください。",
-        help: "報告時点で分かる範囲で選んでください。"
+        help: "カレンダーで選ぶか、下の一覧から選んでください。"
       },
       {
         key: "patient_reaction",
@@ -631,9 +686,10 @@
         key: "discovery_date",
         label: QUESTION_LABELS.discovery_date,
         type: "choice",
+        isDateQuestion: true,
         choices: dateOptions,
         bot: "発覚日を選んでください。",
-        help: "報告時点で分かる範囲で選んでください。"
+        help: "カレンダーで選ぶか、下の一覧から選んでください。"
       },
       {
         key: "controlled_search_detail",
@@ -1204,6 +1260,15 @@
     clearVoiceState();
     addMessage("user", "この内容でホットラインへ共有します");
     addMessage("bot", "受付しました。プロトタイプのため外部送信はしていませんが、実運用ではSlack通知と管理表転記がここで実行されます。", "AIは判定せず、すべて人が確認する前提です。");
+
+    saveLog({
+      id: reportId,
+      timestamp: formatDateTime(new Date()),
+      startedAt: formatDateTime(state.startedAt),
+      answers: Object.assign({}, state.answers),
+      attachedFiles: state.attachedFiles.slice()
+    });
+
     render();
   }
 
@@ -1224,7 +1289,9 @@
     state.error = "";
     state.startedAt = new Date();
     state.completedId = "";
+    state.attachedFiles = [];
     clearVoiceState();
+    renderAttachedFiles();
 
     addMessage("bot", "こんにちは。ご連絡ありがとうございます。急いでいる中でも、必要な内容を一つずつ一緒に確認していきます。", "文章をきれいに書く必要はありません。選ぶだけで進められる項目を多くしています。分からないところは「不明」で進められます。");
     addMessage("bot", "このAIは、重大度やミスレベルを判定しません。すべての報告はホットライン担当へ共有し、人が確認します。", "途中で不安になった場合は、いつでも電話相談に切り替えられます。無理に最後まで入力しなくても大丈夫です。");
@@ -1732,6 +1799,29 @@
     const voiceFeedbackHtml = renderVoiceFeedback(q);
     const headingHtml = renderQuestionHeading(q, voiceHtml, voiceFeedbackHtml);
 
+    if (q.type === "choice" && q.isDateQuestion) {
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${pad2(today.getMonth() + 1)}-${pad2(today.getDate())}`;
+      const buttons = q.choices.map((choice) => {
+        const match = choice.match(/(\d{4}\/\d{2}\/\d{2})/);
+        const value = match ? match[1] : choice;
+        return `<button class="choice-button" type="button" data-choice="${escapeHtml(value)}">${escapeHtml(choice)}</button>`;
+      }).join("");
+      return `
+        ${headingHtml}
+        <div class="date-picker-section">
+          <span class="date-picker-label">カレンダーから選択</span>
+          <div class="date-picker-row">
+            <input type="date" id="datePickerInput" class="date-picker-input" max="${todayStr}" />
+            <button id="datePickerSubmit" class="secondary-button date-picker-button" type="button">決定</button>
+          </div>
+        </div>
+        <p class="date-divider-text">または下の一覧から選択</p>
+        <div class="choice-grid">${buttons}</div>
+        ${errorHtml}
+      `;
+    }
+
     if (q.type === "choice") {
       const buttons = q.choices.map((choice) => {
         return `<button class="choice-button" type="button" data-choice="${escapeHtml(choice)}">${escapeHtml(choice)}</button>`;
@@ -1828,14 +1918,22 @@
   }
 
   function renderCompletePanel() {
+    const logCount = loadLogs().length;
+    const attachedInfo = state.attachedFiles.length > 0
+      ? `<p>添付ファイル：${escapeHtml(state.attachedFiles.join("、"))}</p>`
+      : "";
     return `
       <h2 class="question-title">受付完了</h2>
       <div class="complete-box">
         <p class="complete-id">受付番号：${escapeHtml(state.completedId)}</p>
         <p>Slack通知：モック完了</p>
         <p>管理表転記：モック完了</p>
+        ${attachedInfo}
         <p>次に、PSVまたは営業部長からの電話連絡をお待ちください。対応が完了したらPSVへ完了連絡をお願いします。</p>
       </div>
+      <button id="downloadLogFromCompleteButton" class="log-download-button" type="button">
+        回答ログをダウンロード（JSON）<span class="log-count-badge">${logCount}件</span>
+      </button>
       <div class="preview-wrapper complete-preview">
         <p class="summary-title">Slack投稿プレビュー</p>
         ${renderSlackPreviewHtml()}
@@ -1877,6 +1975,20 @@
     questionArea.querySelectorAll("[data-choice]").forEach((button) => {
       button.addEventListener("click", () => submitAnswer(button.getAttribute("data-choice")));
     });
+
+    const datePickerSubmit = document.getElementById("datePickerSubmit");
+    if (datePickerSubmit) {
+      datePickerSubmit.addEventListener("click", () => {
+        const dateInput = document.getElementById("datePickerInput");
+        if (dateInput && dateInput.value) {
+          const [year, month, day] = dateInput.value.split("-");
+          submitAnswer(`${year}/${month}/${day}`);
+        } else {
+          state.error = "日付を選択してください。";
+          render();
+        }
+      });
+    }
 
     const submitTextButton = document.getElementById("submitTextButton");
     const answerInput = document.getElementById("answerInput");
@@ -1938,11 +2050,110 @@
 
     const restartButton = document.getElementById("restartButton");
     if (restartButton) restartButton.addEventListener("click", resetApp);
+
+    const downloadLogFromCompleteButton = document.getElementById("downloadLogFromCompleteButton");
+    if (downloadLogFromCompleteButton) downloadLogFromCompleteButton.addEventListener("click", downloadLogs);
   }
 
   function render() {
     renderMessages();
     renderPanel();
+  }
+
+  /* ── フォントサイズ管理 ── */
+  function applyFontSize(index) {
+    FONT_SIZES.forEach((f) => document.body.classList.remove(f.cls));
+    document.body.classList.remove("large-text");
+    if (index !== FONT_DEFAULT_INDEX) {
+      document.body.classList.add(FONT_SIZES[index].cls);
+    }
+    fontButton.textContent = `文字：${FONT_SIZES[index].label}`;
+    try { localStorage.setItem("hl_font_size_index", String(index)); } catch { /* ignore */ }
+  }
+
+  fontButton.addEventListener("click", () => {
+    fontSizeIndex = (fontSizeIndex + 1) % FONT_SIZES.length;
+    applyFontSize(fontSizeIndex);
+  });
+
+  /* ── ファイル添付 ── */
+  function renderAttachedFiles() {
+    const list = document.getElementById("attachedFilesList");
+    if (!list) return;
+    list.innerHTML = state.attachedFiles.map((name, i) => `
+      <span class="attached-file-chip" title="${escapeHtml(name)}">
+        ${escapeHtml(name.length > 20 ? name.slice(0, 18) + "…" : name)}
+        <button class="attached-file-remove" type="button" data-file-index="${i}" aria-label="${escapeHtml(name)}を削除">✕</button>
+      </span>
+    `).join("");
+    list.querySelectorAll("[data-file-index]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const idx = parseInt(btn.getAttribute("data-file-index"), 10);
+        state.attachedFiles.splice(idx, 1);
+        renderAttachedFiles();
+      });
+    });
+  }
+
+  const fileInput = document.getElementById("fileInput");
+  if (fileInput) {
+    fileInput.addEventListener("change", () => {
+      Array.from(fileInput.files).forEach((file) => {
+        if (!state.attachedFiles.includes(file.name)) {
+          state.attachedFiles.push(file.name);
+        }
+      });
+      fileInput.value = "";
+      renderAttachedFiles();
+    });
+  }
+
+  /* ── リサイズハンドル（モバイル上下比率調整）── */
+  function initResizeHandle() {
+    const handle = document.getElementById("resizeHandle");
+    const chatWindow = document.querySelector(".chat-window");
+    if (!handle || !chatWindow) return;
+
+    let dragging = false;
+    let startY = 0;
+    let startTopPx = 0;
+
+    handle.addEventListener("touchstart", (e) => {
+      if (window.innerWidth >= 960) return;
+      dragging = true;
+      startY = e.touches[0].clientY;
+      const botArea = chatWindow.querySelector(".bot-area");
+      startTopPx = botArea ? botArea.offsetHeight : chatWindow.offsetHeight * 0.52;
+    }, { passive: true });
+
+    window.addEventListener("touchmove", (e) => {
+      if (!dragging) return;
+      e.preventDefault();
+      const dy = e.touches[0].clientY - startY;
+      const handleH = handle.offsetHeight || 20;
+      const total = chatWindow.offsetHeight - handleH;
+      const newTop = Math.min(total * 0.80, Math.max(total * 0.20, startTopPx + dy));
+      const newBottom = total - newTop;
+      chatWindow.style.gridTemplateRows = `${newTop}px ${handleH}px ${newBottom}px`;
+    }, { passive: false });
+
+    window.addEventListener("touchend", () => { dragging = false; });
+
+    handle.addEventListener("keydown", (e) => {
+      if (window.innerWidth >= 960) return;
+      const step = 20;
+      const handleH = handle.offsetHeight || 20;
+      const total = chatWindow.offsetHeight - handleH;
+      const botArea = chatWindow.querySelector(".bot-area");
+      const currentTop = botArea ? botArea.offsetHeight : total * 0.52;
+      let newTop = currentTop;
+      if (e.key === "ArrowUp") newTop = Math.max(total * 0.20, currentTop - step);
+      if (e.key === "ArrowDown") newTop = Math.min(total * 0.80, currentTop + step);
+      if (newTop !== currentTop) {
+        e.preventDefault();
+        chatWindow.style.gridTemplateRows = `${newTop}px ${handleH}px ${total - newTop}px`;
+      }
+    });
   }
 
   editButton.addEventListener("click", () => beginEdit());
@@ -1951,11 +2162,10 @@
     const ok = window.confirm("入力中の内容を消して、最初からやり直しますか？");
     if (ok) resetApp();
   });
-  fontButton.addEventListener("click", () => {
-    document.body.classList.toggle("large-text");
-    fontButton.textContent = document.body.classList.contains("large-text") ? "標準の文字に戻す" : "文字を大きく";
-  });
+  if (downloadLogButton) downloadLogButton.addEventListener("click", downloadLogs);
 
+  applyFontSize(fontSizeIndex);
+  initResizeHandle();
   bindViewportGuards();
   resetApp();
 })();
