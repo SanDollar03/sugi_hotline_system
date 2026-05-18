@@ -181,7 +181,6 @@
   const progressText = document.getElementById("progressText");
   const editButton = document.getElementById("editButton");
   const phoneButton = document.getElementById("phoneButton");
-  const fontButton = document.getElementById("fontButton");
   const resetButton = document.getElementById("resetButton");
   const downloadLogButton = document.getElementById("downloadLogButton");
 
@@ -2060,20 +2059,28 @@
     renderPanel();
   }
 
-  /* ── フォントサイズ管理 ── */
+  /* ── フォントサイズ管理（ヘッダー5ボタン）── */
   function applyFontSize(index) {
     FONT_SIZES.forEach((f) => document.body.classList.remove(f.cls));
     document.body.classList.remove("large-text");
     if (index !== FONT_DEFAULT_INDEX) {
       document.body.classList.add(FONT_SIZES[index].cls);
     }
-    fontButton.textContent = `文字：${FONT_SIZES[index].label}`;
+    fontSizeIndex = index;
+    document.querySelectorAll(".font-size-btn").forEach((btn) => {
+      const idx = parseInt(btn.getAttribute("data-size-index"), 10);
+      const active = idx === index;
+      btn.classList.toggle("is-active", active);
+      btn.setAttribute("aria-pressed", active ? "true" : "false");
+    });
     try { localStorage.setItem("hl_font_size_index", String(index)); } catch { /* ignore */ }
   }
 
-  fontButton.addEventListener("click", () => {
-    fontSizeIndex = (fontSizeIndex + 1) % FONT_SIZES.length;
-    applyFontSize(fontSizeIndex);
+  document.querySelectorAll(".font-size-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const idx = parseInt(btn.getAttribute("data-size-index"), 10);
+      if (Number.isFinite(idx)) applyFontSize(idx);
+    });
   });
 
   /* ── ファイル添付 ── */
@@ -2108,51 +2115,56 @@
     });
   }
 
-  /* ── リサイズハンドル（モバイル上下比率調整）── */
+  /* ── リサイズハンドル（モバイルのみ・初期1:1・ドラッグ調整）── */
   function initResizeHandle() {
     const handle = document.getElementById("resizeHandle");
     const chatWindow = document.querySelector(".chat-window");
     if (!handle || !chatWindow) return;
 
+    const HANDLE_H = 24;
     let dragging = false;
     let startY = 0;
     let startTopPx = 0;
 
+    function isMobile() { return window.innerWidth < 960; }
+
+    function getCurrentTopPx() {
+      const botArea = chatWindow.querySelector(".bot-area");
+      return botArea ? botArea.offsetHeight : Math.floor((chatWindow.offsetHeight - HANDLE_H) / 2);
+    }
+
+    function applyRows(topPx) {
+      if (!isMobile()) return;
+      const total = chatWindow.offsetHeight - HANDLE_H;
+      const clamped = Math.round(Math.min(total * 0.80, Math.max(total * 0.20, topPx)));
+      chatWindow.style.gridTemplateRows = `${clamped}px ${HANDLE_H}px ${total - clamped}px`;
+    }
+
     handle.addEventListener("touchstart", (e) => {
-      if (window.innerWidth >= 960) return;
+      if (!isMobile()) return;
       dragging = true;
       startY = e.touches[0].clientY;
-      const botArea = chatWindow.querySelector(".bot-area");
-      startTopPx = botArea ? botArea.offsetHeight : chatWindow.offsetHeight * 0.52;
+      startTopPx = getCurrentTopPx();
     }, { passive: true });
 
-    window.addEventListener("touchmove", (e) => {
-      if (!dragging) return;
+    handle.addEventListener("touchmove", (e) => {
+      if (!dragging || !isMobile()) return;
       e.preventDefault();
-      const dy = e.touches[0].clientY - startY;
-      const handleH = handle.offsetHeight || 20;
-      const total = chatWindow.offsetHeight - handleH;
-      const newTop = Math.min(total * 0.80, Math.max(total * 0.20, startTopPx + dy));
-      const newBottom = total - newTop;
-      chatWindow.style.gridTemplateRows = `${newTop}px ${handleH}px ${newBottom}px`;
+      applyRows(startTopPx + (e.touches[0].clientY - startY));
     }, { passive: false });
 
-    window.addEventListener("touchend", () => { dragging = false; });
+    handle.addEventListener("touchend", () => { dragging = false; });
+    handle.addEventListener("touchcancel", () => { dragging = false; });
 
     handle.addEventListener("keydown", (e) => {
-      if (window.innerWidth >= 960) return;
-      const step = 20;
-      const handleH = handle.offsetHeight || 20;
-      const total = chatWindow.offsetHeight - handleH;
-      const botArea = chatWindow.querySelector(".bot-area");
-      const currentTop = botArea ? botArea.offsetHeight : total * 0.52;
-      let newTop = currentTop;
-      if (e.key === "ArrowUp") newTop = Math.max(total * 0.20, currentTop - step);
-      if (e.key === "ArrowDown") newTop = Math.min(total * 0.80, currentTop + step);
-      if (newTop !== currentTop) {
-        e.preventDefault();
-        chatWindow.style.gridTemplateRows = `${newTop}px ${handleH}px ${total - newTop}px`;
-      }
+      if (!isMobile()) return;
+      const step = 24;
+      if (e.key === "ArrowUp") { e.preventDefault(); applyRows(getCurrentTopPx() - step); }
+      if (e.key === "ArrowDown") { e.preventDefault(); applyRows(getCurrentTopPx() + step); }
+    });
+
+    window.addEventListener("resize", () => {
+      if (!isMobile()) chatWindow.style.gridTemplateRows = "";
     });
   }
 

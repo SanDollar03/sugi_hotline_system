@@ -120,7 +120,7 @@ select:focus-visible {
   margin: 0 auto;
   background: var(--surface-soft);
   display: grid;
-  grid-template-rows: minmax(0, 56fr) 20px minmax(0, 44fr);
+  grid-template-rows: minmax(0, 50fr) 24px minmax(0, 50fr);
   overflow: hidden;
   overflow-x: hidden;
   box-shadow: var(--shadow);
@@ -142,25 +142,77 @@ select:focus-visible {
   background: var(--header-green);
   color: #fff;
   border-bottom: 4px solid var(--header-green-dark);
-  padding: 12px 18px;
+  padding: 10px 14px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+}
+
+.header-row1 {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 10px;
   min-width: 0;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+}
+
+.header-row2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
 
 .header-main {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   min-width: 0;
   flex: 1 1 auto;
 }
 
 .header-title-block {
   min-width: 0;
+}
+
+/* 文字サイズ選択 */
+.font-size-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.85);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.font-size-control {
+  display: flex;
+  gap: 4px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.font-size-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 30px;
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.10);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.70rem;
+  font-weight: 800;
+  padding: 3px 2px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.font-size-btn.is-active {
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--header-green-dark);
+  border-color: rgba(255, 255, 255, 0.95);
 }
 
 .bot-mark {
@@ -190,27 +242,23 @@ select:focus-visible {
   font-weight: 700;
 }
 
-.header-actions {
-  display: flex;
-  gap: 10px;
-  flex: 0 0 auto;
-}
-
 .header-button {
-  min-height: 48px;
-  border: 3px solid rgba(255, 255, 255, 0.9);
-  border-radius: 14px;
-  padding: 8px 14px;
+  min-height: 44px;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  border-radius: 12px;
+  padding: 7px 12px;
   background: rgba(255, 255, 255, 0.14);
   color: #fff;
-  font-size: 0.9rem;
+  font-size: 0.86rem;
   font-weight: 900;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .header-button.danger {
-  border-color: rgba(255, 220, 220, 0.95);
+  border-color: rgba(255, 200, 200, 0.9);
   color: #fff;
-  background: rgba(164, 38, 44, 0.28);
+  background: rgba(164, 38, 44, 0.30);
 }
 
 .chat-log {
@@ -312,7 +360,7 @@ select:focus-visible {
   width: min(100%, 980px);
   max-width: 100vw;
   margin: 0 auto;
-  padding: 8px 12px;
+  padding: 6px 10px;
   background: var(--surface);
   border-top: 2px solid var(--border);
   box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.08);
@@ -321,7 +369,69 @@ select:focus-visible {
 
 .app-footer .assist-actions {
   margin: 0;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* フッター 4ボタン横並び */
+.footer-four-col {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+/* ファイル選択ボタン（labelをボタン風に） */
+.file-attach-footer-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  text-align: center;
+  font-size: 0.78rem;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.file-input-hidden {
+  display: none;
+}
+
+/* 添付ファイル一覧（フッター内） */
+.attached-files-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+  min-height: 0;
+}
+
+.attached-file-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--success-soft);
+  border: 1.5px solid #9bd6b2;
+  color: var(--success);
+  font-size: 0.72rem;
+  font-weight: 800;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attached-file-remove {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--success);
+  cursor: pointer;
+  font-size: 0.85rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.attached-file-remove:hover {
+  color: var(--danger);
 }
 
 .panel-topline {
@@ -695,21 +805,23 @@ code {
   body.font-xlarge { --font-base: 23px; }
 
   .chat-header {
-    align-items: center;
-    flex-direction: row;
-    gap: 10px;
-    padding: 8px 10px;
+    padding: 7px 10px 6px;
+    gap: 6px;
+  }
+
+  .header-row1 {
+    gap: 8px;
   }
 
   .bot-mark {
-    width: 42px;
-    height: 42px;
-    border-radius: 14px;
-    font-size: 0.78rem;
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    font-size: 0.72rem;
   }
 
   .chat-header h1 {
-    font-size: 1rem;
+    font-size: 0.92rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -719,22 +831,21 @@ code {
     display: none;
   }
 
-  .header-actions {
-    width: auto;
-    gap: 6px;
+  .header-button {
+    min-height: 36px;
+    padding: 5px 10px;
+    border-width: 2px;
+    border-radius: 10px;
+    font-size: 0.72rem;
   }
 
-  .header-button {
-    min-height: 40px;
-    padding: 6px 8px;
-    border-width: 2px;
-    border-radius: 12px;
-    font-size: 0.74rem;
-    white-space: nowrap;
+  .font-size-btn {
+    font-size: 0.65rem;
+    min-height: 26px;
   }
 
   .chat-window {
-    grid-template-rows: minmax(0, 52fr) 20px minmax(0, 48fr);
+    grid-template-rows: minmax(0, 50fr) 24px minmax(0, 50fr);
   }
 
   .choice-grid {
@@ -1121,15 +1232,25 @@ code {
     box-shadow: var(--shadow);
   }
 
-  .bot-area,
-  .answer-panel {
+  /* デスクトップは左右2カラム、リサイズハンドルは非表示 */
+  .resize-handle {
+    display: none !important;
+  }
+
+  .bot-area {
+    grid-column: 1;
+    grid-row: 1;
     height: 100%;
     max-height: 100%;
     border-radius: 24px;
   }
 
-  .resize-handle {
-    display: none;
+  .answer-panel {
+    grid-column: 2;
+    grid-row: 1;
+    height: 100%;
+    max-height: 100%;
+    border-radius: 24px;
   }
 
   .bot-area {
@@ -1198,25 +1319,42 @@ code {
   }
 }
 
-/* ── リサイズハンドル（モバイル上下比率調整）── */
+/* ── リサイズハンドル（モバイルのみ・上下比率調整）── */
 .resize-handle {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: var(--border);
+  gap: 2px;
+  background: #e4e6eb;
   cursor: row-resize;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
   flex-shrink: 0;
   z-index: 10;
+  min-height: 24px;
 }
 
 .resize-handle-bar {
-  width: 48px;
+  width: 52px;
   height: 5px;
   border-radius: 999px;
-  background: #aab0bb;
+  background: #9ba3b0;
+  transition: background 0.15s;
+}
+
+.resize-handle-hint {
+  font-size: 0.6rem;
+  color: #9ba3b0;
+  letter-spacing: 0.1em;
+  line-height: 1;
+}
+
+.resize-handle:hover,
+.resize-handle:focus {
+  background: #d5d9e2;
+  outline: none;
 }
 
 .resize-handle:hover .resize-handle-bar,
@@ -1224,115 +1362,35 @@ code {
   background: var(--primary);
 }
 
-/* ── ファイル添付ゾーン ── */
-.file-attach-zone {
-  padding: 8px 12px 10px;
-  border-bottom: 2px solid var(--border);
-  margin-bottom: 10px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  background: var(--surface);
-}
-
-.file-attach-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  border: 2px solid var(--primary);
-  border-radius: 999px;
-  background: var(--primary-soft);
-  color: var(--primary-dark);
-  font-size: 0.86rem;
-  font-weight: 900;
-  cursor: pointer;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.file-attach-label:hover {
-  background: var(--primary);
-  color: #fff;
-}
-
-.file-attach-icon {
-  font-size: 1rem;
-  line-height: 1;
-}
-
-.file-attach-text {
-  font-size: 0.84rem;
-}
-
-.file-input-hidden {
-  display: none;
-}
-
-.attached-files-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  flex: 1 1 auto;
-}
-
-.attached-file-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: var(--success-soft);
-  border: 1.5px solid #9bd6b2;
-  color: var(--success);
-  font-size: 0.78rem;
-  font-weight: 800;
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.attached-file-remove {
-  background: none;
-  border: none;
-  padding: 0;
-  color: var(--success);
-  cursor: pointer;
-  font-size: 0.9rem;
-  line-height: 1;
-  flex-shrink: 0;
-}
-
-.attached-file-remove:hover {
-  color: var(--danger);
-}
-
 /* ── カレンダー日付選択 ── */
 .date-picker-section {
-  margin-bottom: 14px;
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  background: var(--primary-soft);
+  border: 2px solid var(--primary);
+  border-radius: 18px;
   display: grid;
-  gap: 8px;
+  gap: 10px;
 }
 
 .date-picker-label {
   font-size: 0.88rem;
   font-weight: 900;
   color: var(--primary-dark);
+  display: block;
 }
 
 .date-picker-row {
   display: flex;
-  gap: 10px;
-  align-items: stretch;
+  gap: 8px;
+  align-items: center;
 }
 
 .date-picker-input {
   flex: 1 1 auto;
-  border: 3px solid var(--primary);
-  border-radius: 18px;
-  padding: 12px 16px;
+  border: 2px solid var(--primary);
+  border-radius: 14px;
+  padding: 10px 14px;
   background: #fff;
   color: var(--text);
   font-weight: 700;
@@ -1341,40 +1399,33 @@ code {
 }
 
 .date-picker-button {
-  min-height: 0;
+  min-height: 48px;
   padding: 10px 18px;
   flex-shrink: 0;
   white-space: nowrap;
+  border-radius: 14px;
 }
 
 .date-divider-text {
-  margin: 0 0 10px;
+  margin: 4px 0 10px;
   color: var(--muted);
-  font-size: 0.82rem;
+  font-size: 0.80rem;
   font-weight: 700;
   text-align: center;
-  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .date-divider-text::before,
 .date-divider-text::after {
   content: "";
-  position: absolute;
-  top: 50%;
-  width: calc(50% - 60px);
+  flex: 1;
   height: 1px;
   background: var(--border);
 }
 
-.date-divider-text::before { left: 0; }
-.date-divider-text::after  { right: 0; }
-
-/* ── フッター 3カラム ── */
-.footer-three-col {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-/* ── ログダウンロードボタン ── */
+/* ── ログダウンロードボタン（完了画面内） ── */
 .log-download-button {
   margin-top: 10px;
   min-height: 54px;
@@ -1402,25 +1453,4 @@ code {
   font-size: 0.74rem;
   font-weight: 900;
   margin-left: 6px;
-}
-
-@media (max-width: 460px) {
-  .file-attach-zone {
-    padding: 6px 10px 8px;
-  }
-
-  .file-attach-label {
-    padding: 5px 10px;
-    font-size: 0.78rem;
-  }
-
-  .footer-three-col {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 6px;
-  }
-
-  .footer-three-col .assist-button {
-    font-size: 0.72rem;
-    padding: 6px 4px;
-  }
 }
