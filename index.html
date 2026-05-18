@@ -16,54 +16,73 @@
 
   <div id="app" class="app-shell">
     <header class="chat-header app-header" aria-label="アプリヘッダー">
-      <div class="header-main">
-        <span class="bot-mark" aria-hidden="true">HL</span>
-        <div class="header-title-block">
-          <h1>ホットラインAIエージェント</h1>
-          <p>チャットで必要事項を一つずつ確認します</p>
+      <!-- 上段：タイトル + リセット -->
+      <div class="header-row1">
+        <div class="header-main">
+          <span class="bot-mark" aria-hidden="true">HL</span>
+          <div class="header-title-block">
+            <h1>ホットラインAIエージェント</h1>
+            <p>チャットで必要事項を一つずつ確認します</p>
+          </div>
         </div>
-      </div>
-      <div class="header-actions">
-        <button id="fontButton" class="header-button" type="button" aria-label="文字サイズを変更">文字：標準</button>
         <button id="resetButton" class="header-button danger" type="button">最初から</button>
+      </div>
+      <!-- 下段：文字サイズ 5段階 -->
+      <div class="header-row2">
+        <span class="font-size-label" aria-hidden="true">文字サイズ：</span>
+        <div class="font-size-control" role="group" aria-label="文字サイズを選択">
+          <button class="font-size-btn" type="button" data-size-index="0" aria-pressed="false">最小</button>
+          <button class="font-size-btn" type="button" data-size-index="1" aria-pressed="false">小</button>
+          <button class="font-size-btn is-active" type="button" data-size-index="2" aria-pressed="true">標準</button>
+          <button class="font-size-btn" type="button" data-size-index="3" aria-pressed="false">大</button>
+          <button class="font-size-btn" type="button" data-size-index="4" aria-pressed="false">最大</button>
+        </div>
       </div>
     </header>
 
     <main class="app-main" aria-label="ホットラインAIエージェント本体">
       <section class="chat-window" aria-label="ホットラインAIエージェント">
+
+        <!-- チャットエリア -->
         <section class="bot-area" aria-label="チャットボット会話エリア">
           <div id="chatLog" class="chat-log" aria-live="polite" aria-label="会話履歴" role="log"></div>
         </section>
 
-        <div class="resize-handle" id="resizeHandle" role="separator" aria-orientation="horizontal" aria-label="上下サイズ調整ハンドル（ドラッグで調整）" tabindex="0">
+        <!-- 上下サイズ調整ハンドル（モバイルのみ表示） -->
+        <div class="resize-handle" id="resizeHandle"
+             role="separator" aria-orientation="horizontal"
+             aria-label="上下サイズ調整（ドラッグまたは↑↓キー）"
+             tabindex="0">
           <div class="resize-handle-bar"></div>
+          <span class="resize-handle-hint">︙</span>
         </div>
 
+        <!-- 回答操作エリア -->
         <section class="answer-panel" aria-label="回答操作エリア">
-          <div class="file-attach-zone" id="fileAttachZone">
-            <label class="file-attach-label" for="fileInput">
-              <span class="file-attach-icon">📎</span>
-              <span class="file-attach-text">ファイル・写真を添付（任意）</span>
-            </label>
-            <input type="file" id="fileInput" class="file-input-hidden" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt" aria-label="ファイルまたは写真を選択" />
-            <div id="attachedFilesList" class="attached-files-list" aria-live="polite" aria-label="添付済みファイル"></div>
-          </div>
-
           <div class="panel-topline">
             <span class="panel-label">次に操作する場所</span>
             <span id="progressText" class="progress-text">準備中</span>
           </div>
           <div id="questionArea" class="question-area"></div>
         </section>
+
       </section>
     </main>
 
+    <!-- フッター：4ボタン横並び + 添付ファイル表示 -->
     <footer class="app-footer" aria-label="補助操作">
-      <div class="assist-actions footer-three-col">
+      <div class="assist-actions footer-four-col">
         <button id="editButton" class="assist-button" type="button">回答を修正</button>
         <button id="phoneButton" class="assist-button" type="button">電話で相談</button>
-        <button id="downloadLogButton" class="assist-button" type="button" aria-label="ログをJSONでダウンロード">ログ保存</button>
+        <button id="downloadLogButton" class="assist-button" type="button">ログ保存</button>
+        <label class="assist-button file-attach-footer-btn" for="fileInput" tabindex="0" role="button" aria-label="ファイル・写真を選択">
+          📎 ファイル選択
+        </label>
+        <input type="file" id="fileInput" class="file-input-hidden" multiple
+               accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
+               aria-label="ファイルまたは写真を選択" />
       </div>
+      <div id="attachedFilesList" class="attached-files-footer" aria-live="polite" aria-label="添付済みファイル"></div>
     </footer>
   </div>
 
